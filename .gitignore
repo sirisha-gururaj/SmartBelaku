@@ -1,8 +1,22 @@
-node_modules
+# Environment files
 .env
-dist
-build
-coverage
-.vscode
-.DS_Store
+server/.env
+client/.env
+
+# Dependencies
+node_modules/
+server/node_modules/
+client/node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
 *.log
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store

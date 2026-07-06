@@ -3,11 +3,10 @@
 html,
 body,
 #root {
-    height: 100%;
-    margin: 0;
+  height: 100%;
+  margin: 0;
 }
 
 body {
-    font-family: Inter, sans-serif;
-    background: #F8FAFC;
+  font-family: Inter, sans-serif;
 }

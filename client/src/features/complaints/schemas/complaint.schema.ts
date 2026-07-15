@@ -16,7 +16,7 @@ export const complaintSchema = z.object({
   area: z.string().trim().min(2, "Area is required").max(150),
   landmark: z.string().trim().min(2, "Landmark is required").max(150),
   fault_category: z.enum(FAULT_CATEGORIES, { errorMap: () => ({ message: "Select a fault category" }) }),
-  description: z.string().trim().min(10, "Please describe the issue (min 10 characters)").max(1000),
+  description: z.string().trim().max(1000).optional(),
   complaint_source: z.enum(COMPLAINT_SOURCES).optional(),
 });
 

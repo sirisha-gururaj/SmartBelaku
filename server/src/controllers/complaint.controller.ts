@@ -30,7 +30,7 @@ export const addComplaint = async (req: Request, res: Response) => {
     complaint_source,
   } = req.body;
 
-  if (!citizen_name || !contact_number || !ward_number || !area || !landmark || !fault_category || !description) {
+  if (!citizen_name || !contact_number || !ward_number || !area || !landmark || !fault_category) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
@@ -58,7 +58,7 @@ export const addComplaint = async (req: Request, res: Response) => {
     area: String(area).trim(),
     landmark: String(landmark).trim(),
     fault_category,
-    description: String(description).trim(),
+    description: description ? String(description).trim() : null,
     complaint_source: source,
     status: "NEW", // always server-set — never trust the client
   };
@@ -115,4 +115,41 @@ export const fetchAssignedComplaints = async (req: Request, res: Response) => {
   }
 
   return res.json(data);
+};
+
+import {
+  getNotifications,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../services/complaint.service";
+// (add these four to the existing import line)
+
+export const fetchNotifications = async (req: Request, res: Response) => {
+  const { data, error } = await getNotifications();
+  if (error) {
+    console.error("Failed to fetch notifications:", error);
+    return res.status(500).json({ message: "Failed to fetch notifications" });
+  }
+  const unreadCount = await getUnreadNotificationCount();
+  return res.json({ notifications: data, unreadCount });
+};
+
+export const readNotification = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { data, error } = await markNotificationRead(id);
+  if (error) {
+    console.error("Failed to mark notification read:", error);
+    return res.status(500).json({ message: "Failed to update notification" });
+  }
+  return res.json(data);
+};
+
+export const readAllNotifications = async (req: Request, res: Response) => {
+  const { error } = await markAllNotificationsRead();
+  if (error) {
+    console.error("Failed to mark all notifications read:", error);
+    return res.status(500).json({ message: "Failed to update notifications" });
+  }
+  return res.json({ success: true });
 };

@@ -6,6 +6,9 @@ import {
   trackComplaint,
   assignComplaintToMslvl,
   fetchAssignedComplaints,
+  fetchNotifications,
+  readNotification,
+  readAllNotifications,
 } from "../controllers/complaint.controller";
 
 const router = Router();
@@ -15,5 +18,8 @@ router.post("/", optionalAuth, addComplaint);
 router.get("/track/:complaint_number", trackComplaint);
 router.get("/mine/assigned", verifyToken, requireRole("MSLVL"), fetchAssignedComplaints);
 router.patch("/:id/assign", verifyToken, requireRole("ADMIN"), assignComplaintToMslvl);
+router.get("/notifications/all", verifyToken, requireRole("ADMIN"), fetchNotifications);
+router.patch("/notifications/:id/read", verifyToken, requireRole("ADMIN"), readNotification);
+router.patch("/notifications/read-all", verifyToken, requireRole("ADMIN"), readAllNotifications);
 
 export default router;

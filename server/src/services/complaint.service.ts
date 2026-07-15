@@ -65,3 +65,35 @@ export const getAssignedComplaints = async (mslvlId: string) => {
     .eq("assigned_mslvl_id", mslvlId)
     .order("assigned_at", { ascending: false });
 };
+
+export const getNotifications = async () => {
+  return await supabase
+    .from("notifications")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(20);
+};
+
+export const getUnreadNotificationCount = async () => {
+  const { count } = await supabase
+    .from("notifications")
+    .select("*", { count: "exact", head: true })
+    .eq("is_read", false);
+  return count ?? 0;
+};
+
+export const markNotificationRead = async (id: string) => {
+  return await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("id", id)
+    .select()
+    .single();
+};
+
+export const markAllNotificationsRead = async () => {
+  return await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("is_read", false);
+};

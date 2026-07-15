@@ -36,7 +36,7 @@ const AppRoutes = () => {
         >
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/admin/complaints" element={<Complaints />} />
-          <Route path="/admin/complaints/new" element={<NewComplaint />} />
+          
           <Route path="/admin/mslvl" element={<MslvlManagement />} />
         </Route>
 

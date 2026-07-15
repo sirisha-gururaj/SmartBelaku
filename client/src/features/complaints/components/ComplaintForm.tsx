@@ -79,8 +79,8 @@ const ComplaintForm = ({ mode, onSuccess }: Props) => {
         </Field>
       )}
 
-      <Field label="Description" error={errors.description?.message}>
-        <textarea {...register("description")} rows={5} className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-teal-600 focus:outline-none" placeholder="Describe the issue in detail" />
+      <Field label="Description" error={errors.description?.message} required={false}>
+        <textarea {...register("description")} rows={5} className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-teal-600 focus:outline-none" placeholder="Describe the issue in detail (optional)" />
       </Field>
 
       <button type="submit" disabled={submitting} className="w-full bg-teal-700 hover:bg-teal-800 disabled:bg-teal-400 text-white py-3 rounded-lg font-medium transition">
@@ -90,10 +90,10 @@ const ComplaintForm = ({ mode, onSuccess }: Props) => {
   );
 };
 
-const Field = ({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) => (
+const Field = ({ label, error, required = true, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) => (
   <div>
     <label className="block text-sm font-medium text-slate-700 mb-1">
-      {label} <span className="text-red-500">*</span>
+      {label} {required && <span className="text-red-500">*</span>}
     </label>
     {children}
     {error && <p className="text-red-600 text-xs mt-1">{error}</p>}

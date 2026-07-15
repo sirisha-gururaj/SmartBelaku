@@ -1,5 +1,30 @@
 import axios from "axios";
 
-export default axios.create({
+const api = axios.create({
   baseURL: "http://localhost:5000/api",
 });
+
+// Attach the JWT to every outgoing request, if one exists
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// If the backend ever says the token is invalid/expired, log the user out
+// instead of leaving them stuck on a broken page
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;

@@ -7,9 +7,61 @@ export const getComplaints = async () => {
     .order("created_at", { ascending: false });
 };
 
-export const createComplaint = async (complaint: any) => {
+interface NewComplaintPayload {
+  citizen_name: string;
+  contact_number: string;
+  ward_number: number;
+  area: string;
+  landmark: string;
+  fault_category: string;
+  description: string;
+  complaint_source: string;
+  status: string;
+}
+
+export const createComplaint = async (payload: NewComplaintPayload) => {
   return await supabase
     .from("complaints")
-    .insert([complaint])
-    .select();
+    .insert([payload])
+    .select("id, complaint_number, citizen_name, area, status, created_at")
+    .single();
+};
+
+export const getComplaintByNumber = async (complaintNumber: string) => {
+  return await supabase
+    .from("complaints")
+    .select("complaint_number, status, area, ward_number, fault_category, created_at, updated_at")
+    .eq("complaint_number", complaintNumber)
+    .single();
+};  
+
+export const assignComplaint = async (complaintId: string, mslvlId: string) => {
+  const { data: mslvlUser, error: userError } = await supabase
+    .from("users")
+    .select("id, role, is_active")
+    .eq("id", mslvlId)
+    .single();
+
+  if (userError || !mslvlUser || mslvlUser.role !== "MSLVL" || !mslvlUser.is_active) {
+    return { data: null, error: { message: "Invalid or inactive MSLVL account" } };
+  }
+
+  return await supabase
+    .from("complaints")
+    .update({
+      assigned_mslvl_id: mslvlId,
+      status: "ASSIGNED",
+      assigned_at: new Date().toISOString(),
+    })
+    .eq("id", complaintId)
+    .select("id, complaint_number, status, assigned_mslvl_id, assigned_at")
+    .single();
+};
+
+export const getAssignedComplaints = async (mslvlId: string) => {
+  return await supabase
+    .from("complaints")
+    .select("*")
+    .eq("assigned_mslvl_id", mslvlId)
+    .order("assigned_at", { ascending: false });
 };

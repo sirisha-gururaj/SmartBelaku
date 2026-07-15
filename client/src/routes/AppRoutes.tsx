@@ -1,48 +1,57 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import DashboardLayout from "../layouts/DashboardLayout";
+import ProtectedRoute from "./ProtectedRoute";
 
-import Dashboard from "../pages/Dashboard";
-import Complaints from "../pages/Complaints";
-import NewComplaint from "../pages/NewComplaint";
-import StreetLights from "../pages/StreetLights";
-import MSLVL from "../pages/MSLVL";
-import Reports from "../pages/Reports";
-import Settings from "../pages/Settings";
+import Login from "../features/auth/pages/Login";
+import CitizenHome from "../features/citizen/pages/Home";
+import TrackComplaint from "../features/citizen/pages/TrackComplaint";
+import NewComplaint from "../features/complaints/pages/NewComplaint";          // admin — existing import, keep
+import CitizenNewComplaint from "../features/citizen/pages/NewComplaint"; 
+import MslvlManagement from "../features/admin/pages/MslvlManagement";
+import Dashboard from "../features/dashboard/pages/Dashboard";
+import Complaints from "../features/complaints/pages/Complaints";
+import MslvlDashboard from "../features/mslvl/pages/MslvlDashboard";
+import MslvlNewComplaint from "../features/mslvl/pages/NewComplaint";
 
 const AppRoutes = () => {
   return (
     <BrowserRouter>
-
       <Routes>
+        {/* Public — no login */}
+        <Route path="/" element={<CitizenHome />} />
+        <Route path="/complaint/new" element={<CitizenNewComplaint />} />
+        <Route path="/complaint/track" element={<TrackComplaint />} />
 
-        <Route element={<DashboardLayout />}>
+        {/* Staff login */}
+        <Route path="/login" element={<Login />} />
 
-          <Route
-            path="/"
-            element={<Dashboard />}
-          />
-
-          <Route
-            path="/complaints"
-            element={<Complaints />}
-          />
-
-          <Route
-            path="/complaints/new"
-            element={<NewComplaint />}
-        />
-        <Route path="/street-lights" element={<StreetLights />} />
-<Route path="/mslvl" element={<MSLVL />} />
-<Route path="/reports" element={<Reports />} />
-<Route path="/settings" element={<Settings />} />
-
+        {/* Admin only */}
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/admin" element={<Dashboard />} />
+          <Route path="/admin/complaints" element={<Complaints />} />
+          <Route path="/admin/complaints/new" element={<NewComplaint />} />
+          <Route path="/admin/mslvl" element={<MslvlManagement />} />
         </Route>
 
-        
-
+        {/* MSLVL only */}
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={["MSLVL"]}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/mslvl" element={<MslvlDashboard />} />
+          <Route path="/mslvl/complaints/new" element={<MslvlNewComplaint />} />
+        </Route>
       </Routes>
-
     </BrowserRouter>
   );
 };

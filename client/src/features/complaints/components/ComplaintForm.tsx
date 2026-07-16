@@ -49,7 +49,7 @@ const ComplaintForm = ({ mode, onSuccess }: Props) => {
       </Field>
 
       <Field label="Ward" error={errors.ward_number?.message}>
-        <select {...register("ward_number")} defaultValue="" className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-teal-600 focus:outline-none">
+        <select {...register("ward_number",  { valueAsNumber: true })}  defaultValue="" className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-teal-600 focus:outline-none">
           <option value="" disabled>Select ward</option>
           {WARDS.map((w) => <option key={w} value={w}>Ward {w}</option>)}
         </select>

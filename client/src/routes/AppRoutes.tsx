@@ -5,8 +5,7 @@ import ProtectedRoute from "./ProtectedRoute";
 
 import Login from "../features/auth/pages/Login";
 import CitizenHome from "../features/citizen/pages/Home";
-import TrackComplaint from "../features/citizen/pages/TrackComplaint";
-import NewComplaint from "../features/complaints/pages/NewComplaint";          // admin — existing import, keep
+import TrackComplaint from "../features/citizen/pages/TrackComplaint";        
 import CitizenNewComplaint from "../features/citizen/pages/NewComplaint"; 
 import MslvlManagement from "../features/admin/pages/MslvlManagement";
 import Dashboard from "../features/dashboard/pages/Dashboard";

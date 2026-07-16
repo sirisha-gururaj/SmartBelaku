@@ -14,7 +14,7 @@ interface NewComplaintPayload {
   area: string;
   landmark: string;
   fault_category: string;
-  description: string;
+  description: string | null;
   complaint_source: string;
   status: string;
 }
@@ -96,4 +96,12 @@ export const markAllNotificationsRead = async () => {
     .from("notifications")
     .update({ is_read: true })
     .eq("is_read", false);
+};
+
+export const getComplaintById = async (id: string) => {
+  return await supabase
+    .from("complaints")
+    .select("*, assigned_mslvl:users!assigned_mslvl_id(id, full_name)")
+    .eq("id", id)
+    .single();
 };

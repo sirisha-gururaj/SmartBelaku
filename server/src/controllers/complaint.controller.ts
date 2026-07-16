@@ -1,5 +1,16 @@
 import { Request, Response } from "express";
-import { getComplaints, createComplaint, getComplaintByNumber,  assignComplaint, getAssignedComplaints  } from "../services/complaint.service";
+import {
+  getComplaints,
+  createComplaint,
+  getComplaintByNumber,
+  assignComplaint,
+  getAssignedComplaints,
+  getNotifications,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+  getComplaintById,
+} from "../services/complaint.service";
 
 const FAULT_CATEGORIES = [
   "Wire Change", "Light Replacement", "Switch Problem", "Jump Repair",
@@ -38,18 +49,17 @@ export const addComplaint = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "Invalid fault category" });
   }
 
-  // Only a verified Admin token can set an internal source; everyone else is logged as the citizen portal
   const role = req.user?.role;
   let source = "Citizen Portal";
 
   if (role === "ADMIN" && complaint_source) {
     if (!COMPLAINT_SOURCES.includes(complaint_source)) {
-        return res.status(400).json({ message: "Invalid complaint source" });
+      return res.status(400).json({ message: "Invalid complaint source" });
     }
     source = complaint_source;
   } else if (role === "MSLVL") {
     source = "Field Inspection";
- }
+  }
 
   const safePayload = {
     citizen_name: String(citizen_name).trim(),
@@ -60,7 +70,7 @@ export const addComplaint = async (req: Request, res: Response) => {
     fault_category,
     description: description ? String(description).trim() : null,
     complaint_source: source,
-    status: "NEW", // always server-set — never trust the client
+    status: "NEW",
   };
 
   const { data, error } = await createComplaint(safePayload);
@@ -73,7 +83,7 @@ export const addComplaint = async (req: Request, res: Response) => {
 };
 
 export const trackComplaint = async (req: Request, res: Response) => {
-  const { complaint_number } = req.params;
+  const complaint_number = String(req.params.complaint_number ?? "");
 
   if (!complaint_number) {
     return res.status(400).json({ message: "Complaint number is required" });
@@ -89,7 +99,7 @@ export const trackComplaint = async (req: Request, res: Response) => {
 };
 
 export const assignComplaintToMslvl = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const { mslvl_id } = req.body;
 
   if (!mslvl_id) {
@@ -117,14 +127,6 @@ export const fetchAssignedComplaints = async (req: Request, res: Response) => {
   return res.json(data);
 };
 
-import {
-  getNotifications,
-  getUnreadNotificationCount,
-  markNotificationRead,
-  markAllNotificationsRead,
-} from "../services/complaint.service";
-// (add these four to the existing import line)
-
 export const fetchNotifications = async (req: Request, res: Response) => {
   const { data, error } = await getNotifications();
   if (error) {
@@ -136,7 +138,7 @@ export const fetchNotifications = async (req: Request, res: Response) => {
 };
 
 export const readNotification = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const { data, error } = await markNotificationRead(id);
   if (error) {
     console.error("Failed to mark notification read:", error);
@@ -152,4 +154,13 @@ export const readAllNotifications = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Failed to update notifications" });
   }
   return res.json({ success: true });
+};
+
+export const fetchComplaintById = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const { data, error } = await getComplaintById(id);
+  if (error || !data) {
+    return res.status(404).json({ message: "Complaint not found" });
+  }
+  return res.json(data);
 };

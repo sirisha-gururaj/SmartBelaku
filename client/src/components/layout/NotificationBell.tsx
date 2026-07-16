@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { MdNotifications } from "react-icons/md";
 import { supabase } from "../../services/supabase";
+import { useAdminModals } from "../../features/admin/context/AdminModalContext";
 import {
   getNotifications,
   markNotificationRead,
@@ -10,16 +10,16 @@ import {
 } from "../../features/admin/services/notification.service";
 
 const NotificationBell = () => {
+  const { openComplaint } = useAdminModals();
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     void loadNotifications();
 
-    // Live updates: subscribe directly to Postgres inserts on this table
     const channel = supabase
       .channel("notifications-realtime")
       .on(
@@ -71,7 +71,7 @@ const NotificationBell = () => {
       }
     }
     setOpen(false);
-    navigate("/admin/complaints");
+    openComplaint(notif.complaint_id);
   };
 
   const handleMarkAllRead = async () => {

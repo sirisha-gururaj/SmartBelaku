@@ -19,3 +19,8 @@ export const assignComplaint = async (complaintId: string, mslvlId: string) => {
   const res = await api.patch(`/complaints/${complaintId}/assign`, { mslvl_id: mslvlId });
   return res.data;
 };
+
+export const getComplaintById = async (id: string) => {
+  const res = await api.get(`/complaints/${id}`);
+  return res.data;
+};

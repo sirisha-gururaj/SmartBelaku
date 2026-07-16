@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { createMslvlUser, listMslvlUsers  } from "../services/admin.service";
+import { createMslvlUser, listMslvlUsers, getMslvlCrewDetail  } from "../services/admin.service";
 
 export const createMslvlAccount = async (req: Request, res: Response) => {
   try {
@@ -25,5 +25,17 @@ export const getMslvlAccounts = async (req: Request, res: Response) => {
     console.error("Failed to list MSLVL accounts:", error);
     return res.status(500).json({ message: "Failed to fetch MSLVL accounts" });
   }
+  return res.json(data);
+};
+
+export const getMslvlAccountDetail = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const { data, error } = await getMslvlCrewDetail(id);
+
+  if (error || !data) {
+    console.error("Failed to fetch MSLVL detail:", error);
+    return res.status(404).json({ message: "MSLVL account not found" });
+  }
+
   return res.json(data);
 };

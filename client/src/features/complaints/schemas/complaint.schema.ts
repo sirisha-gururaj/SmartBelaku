@@ -12,10 +12,10 @@ export const COMPLAINT_SOURCES = [
 export const complaintSchema = z.object({
   citizen_name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   contact_number: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
-  ward_number: z.coerce.number({ invalid_type_error: "Select a ward" }).int().min(1).max(60),
+  ward_number: z.number({ error: "Select a ward" }).int().min(1).max(60),
   area: z.string().trim().min(2, "Area is required").max(150),
   landmark: z.string().trim().min(2, "Landmark is required").max(150),
-  fault_category: z.enum(FAULT_CATEGORIES, { errorMap: () => ({ message: "Select a fault category" }) }),
+  fault_category: z.enum(FAULT_CATEGORIES, { error: "Select a fault category" }),
   description: z.string().trim().max(1000).optional(),
   complaint_source: z.enum(COMPLAINT_SOURCES).optional(),
 });

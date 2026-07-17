@@ -4,7 +4,7 @@ import Modal from "../../../components/ui/Modal";
 import ComplaintDetail from "../../complaints/components/ComplaintDetail";
 import type { ComplaintDetailData } from "../../complaints/components/ComplaintDetail";
 import MslvlDetail from "./MslvlDetail";
-import { getComplaintById, assignComplaint } from "../../complaints/services/complaint.service";
+import { getComplaintById, assignComplaint, verifyAndClose } from "../../complaints/services/complaint.service";
 import { getMslvlCrewDetail } from "../services/mslvl.service";
 import type { MslvlCrewDetail } from "../services/mslvl.service";
 
@@ -63,6 +63,13 @@ const GlobalModals = () => {
     if (openMslvlId) await loadCrew(openMslvlId);
   };
 
+  const handleVerifyClose = async () => {
+    if (!complaint) return;
+    await verifyAndClose(complaint.id);
+    await refreshAll();
+    await loadComplaint(complaint.id);
+  };
+
   const unassignedComplaints = complaints.filter((c) => !c.assigned_mslvl_id);
 
   return (
@@ -80,6 +87,7 @@ const GlobalModals = () => {
             mslvlAccounts={mslvlAccounts}
             onVehicleClick={(id) => openMslvl(id)}
             onAssign={(mslvlId) => handleAssign(complaint.id, mslvlId)}
+            onVerifyClose={handleVerifyClose}
           />
         )}
       </Modal>

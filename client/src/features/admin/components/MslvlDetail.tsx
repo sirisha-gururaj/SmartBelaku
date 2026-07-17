@@ -30,29 +30,29 @@ const MslvlDetail = ({ crew, unassignedComplaints, onAssignComplaint, onComplain
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        <div className="min-w-0">
           <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Email</p>
-          <p className="text-slate-700">{crew.email}</p>
+          <p className="text-slate-700 break-words">{crew.email}</p>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Phone</p>
-          <p className="text-slate-700">{crew.phone ?? "—"}</p>
+          <p className="text-slate-700 break-words">{crew.phone ?? "—"}</p>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Status</p>
           <span className={`text-xs px-2 py-1 rounded-full ${crew.is_active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
             {crew.is_active ? "Active" : "Inactive"}
           </span>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Total Jobs</p>
           <p className="text-slate-700">{crew.complaints.length} ({activeJobs.length} active)</p>
         </div>
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
           <h3 className="font-semibold text-slate-800">Assigned Complaints</h3>
           <button onClick={() => setShowAssign((s) => !s)} className="text-xs text-teal-700 hover:underline font-medium">
             {showAssign ? "Cancel" : "+ Assign a Complaint"}
@@ -60,27 +60,27 @@ const MslvlDetail = ({ crew, unassignedComplaints, onAssignComplaint, onComplain
         </div>
 
         {showAssign && (
-  <div className="mb-4 bg-slate-50 rounded-lg p-3">
-    {unassignedComplaints.length === 0 ? (
-      <p className="text-sm text-slate-400">No unassigned complaints available right now.</p>
-    ) : (
-      <div className="max-h-60 overflow-y-auto space-y-1.5">
-        {unassignedComplaints.map((c) => (
-          <button
-            key={c.id}
-            disabled={assigning}
-            onClick={() => handleAssign(c.id)}
-            className="w-full text-left bg-white border rounded-lg p-2.5 text-sm hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
-          >
-            <span className="font-mono font-medium text-slate-800">{c.complaint_number}</span>
-            <span className="text-slate-500"> — {c.area} ({c.fault_category})</span>
-          </button>
-        ))}
-      </div>
-    )}
-    {assigning && <p className="text-xs text-teal-700 mt-2">Assigning...</p>}
-  </div>
-)}
+          <div className="mb-4 bg-slate-50 rounded-lg p-3">
+            {unassignedComplaints.length === 0 ? (
+              <p className="text-sm text-slate-400">No unassigned complaints available right now.</p>
+            ) : (
+              <div className="max-h-60 overflow-y-auto space-y-1.5">
+                {unassignedComplaints.map((c) => (
+                  <button
+                    key={c.id}
+                    disabled={assigning}
+                    onClick={() => handleAssign(c.id)}
+                    className="w-full text-left bg-white border rounded-lg p-2.5 text-sm hover:border-teal-600 hover:bg-teal-50 transition disabled:opacity-50"
+                  >
+                    <span className="font-mono font-medium text-slate-800">{c.complaint_number}</span>
+                    <span className="text-slate-500"> — {c.area} ({c.fault_category})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {assigning && <p className="text-xs text-teal-700 mt-2">Assigning...</p>}
+          </div>
+        )}
 
         {crew.complaints.length === 0 ? (
           <p className="text-sm text-slate-400">No complaints assigned yet.</p>
@@ -90,14 +90,14 @@ const MslvlDetail = ({ crew, unassignedComplaints, onAssignComplaint, onComplain
               <button
                 key={c.id}
                 onClick={() => onComplaintClick(c.id)}
-                className="w-full border rounded-lg p-3 flex justify-between items-center text-left hover:border-teal-600 hover:bg-slate-50 transition"
+                className="w-full border rounded-lg p-3 text-left hover:border-teal-600 hover:bg-slate-50 transition"
               >
-                <div>
-                  <p className="font-mono text-sm font-medium text-slate-800">{c.complaint_number}</p>
-                  <p className="text-xs text-slate-500">{c.area} · Ward {c.ward_number} · {c.fault_category}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Assigned {new Date(c.assigned_at).toLocaleDateString()}</p>
+                <div className="flex justify-between items-start gap-2 mb-1">
+                  <span className="font-mono text-sm font-medium text-slate-800">{c.complaint_number}</span>
+                  <StatusBadge status={c.status} />
                 </div>
-                <StatusBadge status={c.status} />
+                <p className="text-xs text-slate-500 break-words">{c.area} · Ward {c.ward_number} · {c.fault_category}</p>
+                <p className="text-xs text-slate-400 mt-0.5">Assigned {new Date(c.assigned_at).toLocaleDateString()}</p>
               </button>
             ))}
           </div>

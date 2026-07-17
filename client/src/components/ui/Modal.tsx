@@ -21,16 +21,16 @@ const Modal = ({ isOpen, onClose, title, children, zIndexClass = "z-50" }: Modal
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 ${zIndexClass} flex items-center justify-center p-4`}>
+    <div className={`fixed inset-0 ${zIndexClass} flex items-center justify-center sm:p-4`}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-5 border-b sticky top-0 bg-white">
-          <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+      <div className="relative bg-white sm:rounded-xl shadow-xl w-full h-full sm:h-auto sm:max-w-2xl max-h-full sm:max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-4 sm:p-5 border-b sticky top-0 bg-white z-10">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-800 truncate pr-3">{title}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 shrink-0">
             <MdClose size={24} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

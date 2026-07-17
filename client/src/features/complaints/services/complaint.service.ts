@@ -24,3 +24,8 @@ export const getComplaintById = async (id: string) => {
   const res = await api.get(`/complaints/${id}`);
   return res.data;
 };
+
+export const verifyAndClose = async (complaintId: string) => {
+  const res = await api.patch(`/mslvl/${complaintId}/verify-close`);
+  return res.data;
+};

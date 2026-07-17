@@ -80,46 +80,59 @@ const Complaints = () => {
   };
   const hasActiveFilters = statusFilter || sourceFilter || assignedFilter || dateFilter || faultFilter || wardFilter || searchQuery;
 
+  const AssignControl = ({ complaint }: { complaint: Complaint }) =>
+    complaint.assigned_mslvl_id ? (
+      <button onClick={() => openMslvl(complaint.assigned_mslvl_id!)} className="text-sm text-teal-700 hover:underline font-medium">
+        {mslvlAccounts.find((m) => m.id === complaint.assigned_mslvl_id)?.full_name ?? "Assigned"}
+      </button>
+    ) : (
+      <select defaultValue="" disabled={assigningId === complaint.id} onChange={(e) => handleAssign(complaint.id, e.target.value)} className="border rounded-lg p-2 text-sm w-full sm:w-auto">
+        <option value="" disabled>{assigningId === complaint.id ? "Assigning..." : "Assign to..."}</option>
+        {mslvlAccounts.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+      </select>
+    );
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Complaints</h1>
-        <div className="flex gap-3">
-          <button onClick={refreshAll} className="border border-teal-700 text-teal-700 px-5 py-2 rounded-lg hover:bg-teal-50">Refresh</button>
-          <button onClick={() => setShowNewComplaintModal(true)} className="bg-teal-700 hover:bg-teal-800 text-white px-5 py-2 rounded-lg">+ New Complaint</button>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Complaints</h1>
+        <div className="flex gap-2 sm:gap-3">
+          <button onClick={refreshAll} className="flex-1 sm:flex-none border border-teal-700 text-teal-700 px-4 sm:px-5 py-2 rounded-lg hover:bg-teal-50 text-sm sm:text-base">Refresh</button>
+          <button onClick={() => setShowNewComplaintModal(true)} className="flex-1 sm:flex-none bg-teal-700 hover:bg-teal-800 text-white px-4 sm:px-5 py-2 rounded-lg text-sm sm:text-base">+ New Complaint</button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow border p-4 mb-5 space-y-3">
+      <div className="bg-white rounded-xl shadow border p-3 sm:p-4 mb-5 space-y-3">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by citizen name, vehicle, description, fault type..."
+          placeholder="Search citizen, vehicle, description, fault..."
           className="w-full border rounded-lg p-2 text-sm"
         />
-        <div className="flex flex-wrap gap-3 items-center">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg p-2 text-sm">
+        <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg p-2 text-xs sm:text-sm flex-1 min-w-[45%] sm:flex-none sm:min-w-0">
             <option value="">All Statuses</option>
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}
           </select>
-          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="border rounded-lg p-2 text-sm">
+          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="border rounded-lg p-2 text-xs sm:text-sm flex-1 min-w-[45%] sm:flex-none sm:min-w-0">
             <option value="">All Sources</option>
             {SOURCE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select value={assignedFilter} onChange={(e) => setAssignedFilter(e.target.value)} className="border rounded-lg p-2 text-sm">
+          <select value={assignedFilter} onChange={(e) => setAssignedFilter(e.target.value)} className="border rounded-lg p-2 text-xs sm:text-sm flex-1 min-w-[45%] sm:flex-none sm:min-w-0">
             <option value="">All Assignments</option>
             <option value="unassigned">Unassigned</option>
             {mslvlAccounts.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
           </select>
-          <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="border rounded-lg p-2 text-sm" />
+          <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="border rounded-lg p-2 text-xs sm:text-sm flex-1 min-w-[45%] sm:flex-none sm:min-w-0" />
           {faultFilter && <span className="text-xs bg-teal-50 text-teal-700 px-3 py-1.5 rounded-full">Fault: {faultFilter} <button onClick={() => setFaultFilter("")} className="ml-1 font-bold">×</button></span>}
           {wardFilter && <span className="text-xs bg-teal-50 text-teal-700 px-3 py-1.5 rounded-full">Ward: {wardFilter} <button onClick={() => setWardFilter("")} className="ml-1 font-bold">×</button></span>}
-          {hasActiveFilters && <button onClick={clearFilters} className="text-sm text-red-600 hover:underline ml-auto">Clear filters</button>}
+          {hasActiveFilters && <button onClick={clearFilters} className="text-sm text-red-600 hover:underline sm:ml-auto w-full sm:w-auto text-left sm:text-right">Clear filters</button>}
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow border overflow-hidden">
+      {/* Desktop: table */}
+      <div className="hidden md:block bg-white rounded-xl shadow border overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-100">
             <tr>
@@ -141,22 +154,34 @@ const Complaints = () => {
                   <td className="p-4">{complaint.area}</td>
                   <td className="p-4"><StatusBadge status={complaint.status} /></td>
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                    {complaint.assigned_mslvl_id ? (
-                      <button onClick={() => openMslvl(complaint.assigned_mslvl_id!)} className="text-sm text-teal-700 hover:underline font-medium">
-                        {mslvlAccounts.find((m) => m.id === complaint.assigned_mslvl_id)?.full_name ?? "Assigned"}
-                      </button>
-                    ) : (
-                      <select defaultValue="" disabled={assigningId === complaint.id} onChange={(e) => handleAssign(complaint.id, e.target.value)} className="border rounded-lg p-2 text-sm">
-                        <option value="" disabled>{assigningId === complaint.id ? "Assigning..." : "Assign to..."}</option>
-                        {mslvlAccounts.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-                      </select>
-                    )}
+                    <AssignControl complaint={complaint} />
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile: stacked cards */}
+      <div className="md:hidden space-y-3">
+        {filteredComplaints.length === 0 ? (
+          <div className="bg-white rounded-xl shadow border p-8 text-center text-gray-500">No complaints match these filters.</div>
+        ) : (
+          filteredComplaints.map((complaint) => (
+            <div key={complaint.id} onClick={() => openComplaint(complaint.id)} className="bg-white rounded-xl shadow border p-4 cursor-pointer active:bg-slate-50">
+              <div className="flex justify-between items-start gap-2 mb-2">
+                <span className="font-mono font-medium text-slate-800">{complaint.complaint_number}</span>
+                <StatusBadge status={complaint.status} />
+              </div>
+              <p className="text-sm text-slate-700 font-medium">{complaint.citizen_name}</p>
+              <p className="text-sm text-slate-500 truncate">{complaint.area}</p>
+              <div className="mt-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+                <AssignControl complaint={complaint} />
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <Modal isOpen={showNewComplaintModal} onClose={() => setShowNewComplaintModal(false)} title="Register Complaint">

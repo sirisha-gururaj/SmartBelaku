@@ -37,22 +37,22 @@ const TrackComplaint = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-12">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-slate-800 mb-1">Track Complaint</h1>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
+      <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 w-full max-w-md">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1">Track Complaint</h1>
         <p className="text-slate-500 text-sm mb-6">Enter the complaint number you received.</p>
 
-        <form onSubmit={handleSearch} className="flex gap-2 mb-6">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mb-6">
           <input
             value={complaintNumber}
             onChange={(e) => setComplaintNumber(e.target.value)}
-            placeholder="e.g. CMP-1003"
-            className="flex-1 border rounded-lg p-3 focus:ring-2 focus:ring-teal-600 focus:outline-none"
+            placeholder="e.g. 0715003"
+            className="flex-1 border rounded-lg p-3 text-base focus:ring-2 focus:ring-teal-600 focus:outline-none"
           />
           <button
             type="submit"
             disabled={loading}
-            className="bg-teal-700 hover:bg-teal-800 disabled:bg-teal-400 text-white px-5 rounded-lg font-medium"
+            className="bg-teal-700 hover:bg-teal-800 disabled:bg-teal-400 text-white px-5 py-3 sm:py-0 rounded-lg font-medium text-base"
           >
             {loading ? "..." : "Search"}
           </button>
@@ -63,9 +63,9 @@ const TrackComplaint = () => {
         )}
 
         {result && (
-          <div className="border rounded-lg p-5 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="font-mono font-semibold text-slate-800">{result.complaint_number}</span>
+          <div className="border rounded-lg p-4 sm:p-5 space-y-3">
+            <div className="flex flex-wrap justify-between items-center gap-2">
+              <span className="font-mono font-semibold text-slate-800 break-all">{result.complaint_number}</span>
               <StatusBadge status={result.status} />
             </div>
             <div className="text-sm text-slate-600 space-y-1">

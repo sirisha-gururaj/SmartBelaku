@@ -39,8 +39,12 @@ export const AdminModalProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+  const userRaw = localStorage.getItem("user");
+  const role = userRaw ? JSON.parse(userRaw).role : null;
+  if (role === "ADMIN") {
     void refreshAll();
-  }, [refreshAll]);
+  }
+}, [refreshAll]);
 
   return (
     <AdminModalContext.Provider

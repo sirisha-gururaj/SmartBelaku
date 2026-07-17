@@ -3,12 +3,19 @@ import cors from "cors";
 import dotenv from "dotenv";
 import routes from "./routes";
 
-
 dotenv.config();
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins: string[] = [
+  "http://localhost:5173",
+  process.env.CLIENT_URL,
+].filter((origin): origin is string => Boolean(origin));
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use("/api", routes);

@@ -38,8 +38,11 @@ const SurveyorDashboard = () => {
             <button key={s.id} onClick={() => navigate(`/surveyor/${s.id}`)} className="bg-white rounded-xl shadow border p-4 text-left hover:border-teal-600 active:bg-slate-50 transition">
               <div className="flex justify-between items-start gap-2 mb-1">
                 <span className="font-medium text-slate-800">{s.pole_number || s.sl_no || "Untitled entry"}</span>
-                {s.edited_by_admin && (
+                {s.last_edited_by_role === "ADMIN" && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Edited by admin</span>
+                )}
+                {s.last_edited_by_role === "SURVEYOR" && (
+                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full shrink-0">Edited by you</span>
                 )}
               </div>
               <p className="text-xs text-slate-400 mt-1">

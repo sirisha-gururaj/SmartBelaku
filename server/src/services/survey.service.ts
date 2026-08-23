@@ -98,16 +98,18 @@ export const updateSurvey = async (
     return { data: null, error: { message: "This survey does not belong to you" } };
   }
 
-  const update: Record<string, unknown> = { ...payload, updated_at: new Date().toISOString() };
+  const update: Record<string, unknown> = {
+    ...payload,
+    updated_at: new Date().toISOString(),
+    // Tracks who touched it *last* — flips back and forth as admin and the
+    // surveyor take turns editing, rather than sticking once admin edits once.
+    last_edited_by_role: requester.role,
+    last_edited_at: new Date().toISOString(),
+    last_edited_by_id: requester.id,
+  };
 
   if (file) {
     update.photo_url = await uploadSurveyPhoto(file);
-  }
-
-  if (requester.role === "ADMIN") {
-    update.edited_by_admin = true;
-    update.edited_by_admin_at = new Date().toISOString();
-    update.edited_by_admin_id = requester.id;
   }
 
   return await supabase

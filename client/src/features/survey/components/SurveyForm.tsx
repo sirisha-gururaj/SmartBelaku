@@ -197,9 +197,9 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">{error}</div>}
 
-      {initial?.edited_by_admin && (
+      {initial?.last_edited_by_role === "ADMIN" && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg p-3">
-          Edited by admin{initial.edited_by_admin_at ? ` on ${new Date(initial.edited_by_admin_at).toLocaleString()}` : ""}.
+          Edited by admin{initial.last_edited_at ? ` on ${new Date(initial.last_edited_at).toLocaleString()}` : ""}.
         </div>
       )}
 

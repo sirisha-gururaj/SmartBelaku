@@ -18,9 +18,9 @@ export interface Survey {
   wattages: string[] | null;
   cb_condition: string | null;
   dedicated_street_light_line: string | null;
-  edited_by_admin: boolean;
-  edited_by_admin_at: string | null;
-  edited_by_admin_id: string | null;
+  last_edited_by_role: "ADMIN" | "SURVEYOR" | null;
+  last_edited_at: string | null;
+  last_edited_by_id: string | null;
   created_at: string;
   updated_at: string;
   surveyor?: { id: string; full_name: string };

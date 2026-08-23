@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getAllSurveys, updateSurvey } from "../../survey/services/survey.service";
 import type { Survey, SurveyFormValues } from "../../survey/services/survey.service";
 import SurveyForm from "../../survey/components/SurveyForm";
+import SurveyDetail from "../../survey/components/SurveyDetail";
 import Modal from "../../../components/ui/Modal";
 import { WARDS, POLE_TYPES, LED_MAKES, WATTAGES, CB_CONDITIONS, YES_NO } from "../../survey/constants";
 
@@ -9,6 +10,10 @@ const Surveys = () => {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Survey | null>(null);
+  const [editing, setEditing] = useState(false);
+
+  const openSurvey = (s: Survey) => { setSelected(s); setEditing(false); };
+  const closeModal = () => { setSelected(null); setEditing(false); };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [wardFilter, setWardFilter] = useState("");
@@ -31,7 +36,7 @@ const Surveys = () => {
   const handleUpdate = async (values: SurveyFormValues, photo: File | null) => {
     if (!selected) return;
     await updateSurvey(selected.id, values, photo);
-    setSelected(null);
+    closeModal();
     await load();
   };
 
@@ -52,8 +57,9 @@ const Surveys = () => {
       if (dedicatedLineFilter && s.dedicated_street_light_line !== dedicatedLineFilter) return false;
       if (surveyorFilter && s.surveyor?.id !== surveyorFilter) return false;
       if (dateFilter && new Date(s.created_at).toISOString().slice(0, 10) !== dateFilter) return false;
-      if (editedFilter === "edited" && !s.edited_by_admin) return false;
-      if (editedFilter === "not_edited" && s.edited_by_admin) return false;
+      if (editedFilter === "admin" && s.last_edited_by_role !== "ADMIN") return false;
+      if (editedFilter === "surveyor" && s.last_edited_by_role !== "SURVEYOR") return false;
+      if (editedFilter === "none" && s.last_edited_by_role) return false;
       if (q) {
         const haystack = [
           s.sl_no ?? "", s.rr_number ?? "", s.mescom_meter_serial_number ?? "",
@@ -127,9 +133,10 @@ const Surveys = () => {
             {surveyorOptions.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
           </select>
           <select value={editedFilter} onChange={(e) => setEditedFilter(e.target.value)} className={selectClass}>
-            <option value="">Admin Edits: Any</option>
-            <option value="edited">Edited by Admin</option>
-            <option value="not_edited">Not Edited</option>
+            <option value="">Edit Status: Any</option>
+            <option value="admin">Edited by Admin</option>
+            <option value="surveyor">Edited by Surveyor</option>
+            <option value="none">Not Edited</option>
           </select>
           <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={selectClass} />
           {hasActiveFilters && <button onClick={clearFilters} className="text-sm text-red-600 hover:underline sm:ml-auto w-full sm:w-auto text-left sm:text-right">Clear filters</button>}
@@ -159,7 +166,7 @@ const Surveys = () => {
               </thead>
               <tbody>
                 {filteredSurveys.map((s) => (
-                  <tr key={s.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={() => setSelected(s)}>
+                  <tr key={s.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={() => openSurvey(s)}>
                     <td className="p-4">{s.ward ? `Ward ${s.ward}` : "—"}</td>
                     <td className="p-4">{s.pole_number || "—"}</td>
                     <td className="p-4">{s.led_make || "—"}</td>
@@ -175,10 +182,15 @@ const Surveys = () => {
           {/* Mobile: stacked cards */}
           <div className="md:hidden space-y-3">
             {filteredSurveys.map((s) => (
-              <div key={s.id} onClick={() => setSelected(s)} className="bg-white rounded-xl shadow border p-4 cursor-pointer active:bg-slate-50">
+              <div key={s.id} onClick={() => openSurvey(s)} className="bg-white rounded-xl shadow border p-4 cursor-pointer active:bg-slate-50">
                 <div className="flex justify-between items-start gap-2 mb-1">
                   <span className="font-medium text-slate-800">{s.pole_number || s.sl_no || "Untitled entry"}</span>
-                  {s.edited_by_admin && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Edited by admin</span>}
+                  {s.last_edited_by_role === "ADMIN" && (
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Edited by admin</span>
+                  )}
+                  {s.last_edited_by_role === "SURVEYOR" && (
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full shrink-0">Edited by surveyor</span>
+                  )}
                 </div>
                 <p className="text-sm text-slate-500">{s.ward ? `Ward ${s.ward}` : "No ward"} · {s.surveyor?.full_name ?? "Unknown surveyor"}</p>
                 <p className="text-xs text-slate-400 mt-1">{new Date(s.created_at).toLocaleString()}</p>
@@ -188,8 +200,14 @@ const Surveys = () => {
         </>
       )}
 
-      <Modal isOpen={!!selected} onClose={() => setSelected(null)} title={selected?.pole_number || selected?.sl_no || "Survey Entry"}>
-        {selected && <SurveyForm initial={selected} onSubmit={handleUpdate} submitLabel="Save Changes" />}
+      <Modal isOpen={!!selected} onClose={closeModal} title={selected?.pole_number || selected?.sl_no || "Survey Entry"}>
+        {selected && (
+          editing ? (
+            <SurveyForm initial={selected} onSubmit={handleUpdate} submitLabel="Save Changes" />
+          ) : (
+            <SurveyDetail survey={selected} onEdit={() => setEditing(true)} />
+          )
+        )}
       </Modal>
     </div>
   );

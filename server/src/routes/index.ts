@@ -5,6 +5,7 @@ import complaintRoutes from "./complaint.routes";
 import dashboardRoutes from "./dashboard.routes";
 import adminRoutes from "./admin.routes";
 import mslvlRoutes from "./mslvl.routes";
+import surveyRoutes from "./survey.routes";
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.use("/complaints", complaintRoutes);
 router.use("/dashboard", dashboardRoutes);
 router.use("/admin", adminRoutes);
 router.use("/mslvl", mslvlRoutes);
+router.use("/surveys", surveyRoutes);
 
 export default router;

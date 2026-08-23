@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import type { ReactElement } from "react";
-import { MdDashboard, MdAssignment, MdLocalShipping, MdClose } from "react-icons/md";
+import { MdDashboard, MdAssignment, MdLocalShipping, MdClose, MdGroup, MdListAlt } from "react-icons/md";
 
 interface MenuItem {
   name: string;
@@ -12,10 +12,16 @@ const adminMenu: MenuItem[] = [
   { name: "Dashboard", icon: <MdDashboard size={22} />, path: "/admin" },
   { name: "Complaints", icon: <MdAssignment size={22} />, path: "/admin/complaints" },
   { name: "MSLVL", icon: <MdLocalShipping size={22} />, path: "/admin/mslvl" },
+  { name: "Surveyor", icon: <MdGroup size={22} />, path: "/admin/surveyor" },
+  { name: "Surveys", icon: <MdListAlt size={22} />, path: "/admin/surveys" },
 ];
 
 const mslvlMenu: MenuItem[] = [
   { name: "Dashboard", icon: <MdDashboard size={22} />, path: "/mslvl" },
+];
+
+const surveyorMenu: MenuItem[] = [
+  { name: "Dashboard", icon: <MdDashboard size={22} />, path: "/surveyor" },
 ];
 
 interface SidebarProps {
@@ -26,7 +32,7 @@ interface SidebarProps {
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const userRaw = localStorage.getItem("user");
   const role = userRaw ? JSON.parse(userRaw).role : null;
-  const menu = role === "MSLVL" ? mslvlMenu : adminMenu;
+  const menu = role === "MSLVL" ? mslvlMenu : role === "SURVEYOR" ? surveyorMenu : adminMenu;
 
   return (
     <>

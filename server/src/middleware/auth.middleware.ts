@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 interface JwtPayload {
   id: string;
-  role: "ADMIN" | "CITIZEN" | "MSLVL";
+  role: "ADMIN" | "CITIZEN" | "MSLVL" | "SURVEYOR";
 }
 
 // Extend Express's Request type so req.user is typed everywhere it's used

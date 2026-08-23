@@ -58,6 +58,61 @@ export const listMslvlUsers = async () => {
   return { data: withCounts, error: null };
 };
 
+interface CreateSurveyorInput {
+  full_name: string;
+  email: string;
+  phone?: string;
+  password: string;
+}
+
+export const createSurveyorUser = async ({ full_name, email, phone, password }: CreateSurveyorInput) => {
+  const password_hash = await bcrypt.hash(password, 10);
+
+  const { data, error } = await supabase
+    .from("users")
+    .insert({
+      full_name,
+      email,
+      phone: phone || null,
+      password_hash,
+      role: "SURVEYOR",
+      is_active: true,
+    })
+    .select("id, full_name, email, phone, role, is_active, created_at")
+    .single();
+
+  if (error) {
+    console.error("Failed to create Surveyor account:", error);
+    if (error.code === "23505") {
+      throw new Error("An account with this email or phone already exists");
+    }
+    throw new Error("Failed to create Surveyor account");
+  }
+
+  return data;
+};
+
+export const listSurveyorUsers = async () => {
+  const { data: users, error } = await supabase
+    .from("users")
+    .select("id, full_name, email, phone, is_active, created_at")
+    .eq("role", "SURVEYOR")
+    .order("created_at", { ascending: true });
+
+  if (error || !users) return { data: users, error };
+
+  const { data: surveyRows } = await supabase
+    .from("surveys")
+    .select("surveyor_id");
+
+  const withCounts = users.map((u) => ({
+    ...u,
+    totalSurveys: (surveyRows ?? []).filter((s) => s.surveyor_id === u.id).length,
+  }));
+
+  return { data: withCounts, error: null };
+};
+
 export const getMslvlCrewDetail = async (mslvlId: string) => {
   const { data: user, error: userError } = await supabase
     .from("users")

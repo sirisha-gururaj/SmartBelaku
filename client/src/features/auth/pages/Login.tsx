@@ -16,7 +16,7 @@ const Login = () => {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
       const role = response.data.user.role;
-      navigate(role === "ADMIN" ? "/admin" : "/mslvl");
+      navigate(role === "ADMIN" ? "/admin" : role === "MSLVL" ? "/mslvl" : "/surveyor");
     } catch (err) {
       alert("Invalid Email or Password");
     }

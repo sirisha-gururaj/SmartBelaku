@@ -12,6 +12,10 @@ import Dashboard from "../features/dashboard/pages/Dashboard";
 import Complaints from "../features/complaints/pages/Complaints";
 import MslvlDashboard from "../features/mslvl/pages/MslvlDashboard";
 import MslvlNewComplaint from "../features/mslvl/pages/NewComplaint";
+import SurveyorManagement from "../features/admin/pages/SurveyorManagement";
+import Surveys from "../features/admin/pages/Surveys";
+import SurveyorDashboard from "../features/survey/pages/SurveyorDashboard";
+import SurveyFormPage from "../features/survey/pages/SurveyFormPage";
 
 const AppRoutes = () => {
   return (
@@ -35,8 +39,10 @@ const AppRoutes = () => {
         >
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/admin/complaints" element={<Complaints />} />
-          
+
           <Route path="/admin/mslvl" element={<MslvlManagement />} />
+          <Route path="/admin/surveyor" element={<SurveyorManagement />} />
+          <Route path="/admin/surveys" element={<Surveys />} />
         </Route>
 
         {/* MSLVL only */}
@@ -49,6 +55,19 @@ const AppRoutes = () => {
         >
           <Route path="/mslvl" element={<MslvlDashboard />} />
           <Route path="/mslvl/complaints/new" element={<MslvlNewComplaint />} />
+        </Route>
+
+        {/* SURVEYOR only */}
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={["SURVEYOR"]}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/surveyor" element={<SurveyorDashboard />} />
+          <Route path="/surveyor/new" element={<SurveyFormPage />} />
+          <Route path="/surveyor/:id" element={<SurveyFormPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

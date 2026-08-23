@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
-import { createMslvlUser, listMslvlUsers, getMslvlCrewDetail  } from "../services/admin.service";
+import {
+  createMslvlUser, listMslvlUsers, getMslvlCrewDetail,
+  createSurveyorUser, listSurveyorUsers,
+} from "../services/admin.service";
 
 export const createMslvlAccount = async (req: Request, res: Response) => {
   try {
@@ -37,5 +40,32 @@ export const getMslvlAccountDetail = async (req: Request, res: Response) => {
     return res.status(404).json({ message: "MSLVL account not found" });
   }
 
+  return res.json(data);
+};
+
+export const createSurveyorAccount = async (req: Request, res: Response) => {
+  try {
+    const { full_name, email, phone, password } = req.body;
+
+    if (!full_name || !email || !password) {
+      return res.status(400).json({ message: "full_name, email, and password are required" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const user = await createSurveyorUser({ full_name, email, phone, password });
+    return res.status(201).json({ user });
+  } catch (error: any) {
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+export const getSurveyorAccounts = async (_req: Request, res: Response) => {
+  const { data, error } = await listSurveyorUsers();
+  if (error) {
+    console.error("Failed to list Surveyor accounts:", error);
+    return res.status(500).json({ message: "Failed to fetch Surveyor accounts" });
+  }
   return res.json(data);
 };

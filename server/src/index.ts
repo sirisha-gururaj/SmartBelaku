@@ -13,7 +13,14 @@ const allowedOrigins: string[] = [
 ].filter((origin): origin is string => Boolean(origin));
 
 app.use(cors({
-  origin: allowedOrigins,
+  // Vite picks the next free port (5173, 5174, 5175, ...) if one's already in
+  // use, so any localhost port is allowed in addition to the deployed client URL.
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || /^http:\/\/localhost:\d+$/.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
 }));
 app.use(express.json());

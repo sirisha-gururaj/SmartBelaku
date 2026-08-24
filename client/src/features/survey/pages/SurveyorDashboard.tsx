@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMySurveys } from "../services/survey.service";
 import type { Survey } from "../services/survey.service";
+import { exportSurveysToCsv } from "../utils/csv";
 
 const SurveyorDashboard = () => {
   const navigate = useNavigate();
@@ -24,6 +25,13 @@ const SurveyorDashboard = () => {
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="flex-1 sm:flex-none border border-teal-700 text-teal-700 px-4 py-2 rounded-lg hover:bg-teal-50 text-sm">Refresh</button>
+          <button
+            onClick={() => exportSurveysToCsv(surveys, `my-surveys-${new Date().toISOString().slice(0, 10)}.csv`)}
+            disabled={surveys.length === 0}
+            className="flex-1 sm:flex-none border border-teal-700 text-teal-700 px-4 py-2 rounded-lg hover:bg-teal-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+          >
+            Export CSV
+          </button>
           <button onClick={() => navigate("/surveyor/new")} className="flex-1 sm:flex-none bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg text-sm">+ New Survey</button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import SurveyForm from "../../survey/components/SurveyForm";
 import SurveyDetail from "../../survey/components/SurveyDetail";
 import Modal from "../../../components/ui/Modal";
 import { WARDS, POLE_TYPES, LED_MAKES, WATTAGES, CB_CONDITIONS, YES_NO } from "../../survey/constants";
+import { exportSurveysToCsv } from "../../survey/utils/csv";
 
 const Surveys = () => {
   const [surveys, setSurveys] = useState<Survey[]>([]);
@@ -92,7 +93,16 @@ const Surveys = () => {
           <h1 className="text-2xl sm:text-3xl font-bold">Surveys</h1>
           <p className="text-slate-500 text-sm mt-1">Street light survey entries submitted by field surveyors.</p>
         </div>
-        <button onClick={load} className="border border-teal-700 text-teal-700 px-4 py-2 rounded-lg hover:bg-teal-50 text-sm">Refresh</button>
+        <div className="flex gap-2">
+          <button onClick={load} className="border border-teal-700 text-teal-700 px-4 py-2 rounded-lg hover:bg-teal-50 text-sm">Refresh</button>
+          <button
+            onClick={() => exportSurveysToCsv(filteredSurveys, `surveys-export-${new Date().toISOString().slice(0, 10)}.csv`)}
+            disabled={filteredSurveys.length === 0}
+            className="border border-teal-700 text-teal-700 px-4 py-2 rounded-lg hover:bg-teal-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow border p-3 sm:p-4 mb-5 space-y-3">

@@ -25,11 +25,11 @@ const SurveyFormPage = () => {
     })();
   }, [id, navigate]);
 
-  const handleSubmit = async (values: SurveyFormValues, photo: File | null) => {
+  const handleSubmit = async (values: SurveyFormValues, photos: (File | null)[], meterPhoto: File | null) => {
     if (id) {
-      await updateSurvey(id, values, photo);
+      await updateSurvey(id, values, photos, meterPhoto);
     } else {
-      await createSurvey(values, photo);
+      await createSurvey(values, photos, meterPhoto);
     }
     navigate("/surveyor");
   };

@@ -6,39 +6,34 @@ import {
   getSurveyById,
   updateSurvey,
 } from "../services/survey.service";
-import type { SurveyPayload } from "../services/survey.service";
+import type { SurveyPayload, Pole, Light } from "../services/survey.service";
 
 const WARD_MIN = 1;
 const WARD_MAX = 60;
-
-const POLE_TYPES = ["RCC", "Octogonal", "Tubular", "Rail", "Mini Mast", "High Mast"];
-// LED Make and per-light Wattage both have an "Others" option in the dropdown that
-// lets the surveyor type a custom value instead — the client already resolves that
-// to free text before sending, so these two fields accept any trimmed string here.
-const CB_CONDITIONS = ["Good", "Bad"];
-const YES_NO = ["yes", "no"];
 const LIGHTS_MIN = 1;
 const LIGHTS_MAX = 20;
 
-// Every field in the survey form is optional — this only validates the shape
-// of whatever *is* provided, it never requires a field to be present.
-const buildPayload = (body: Record<string, unknown>): SurveyPayload => {
-  const clean = (v: unknown): string | null =>
-    v === undefined || v === null || String(v).trim() === "" ? null : String(v).trim();
+const POLE_TYPES = ["RCC", "Octogonal", "Tubular", "Rail", "Mini Mast", "High Mast"];
+const CB_CONDITIONS = ["Good", "Bad"];
+const YES_NO = ["yes", "no"];
+// LED Make and Wattage both have an "Others" dropdown option that lets the
+// surveyor type a custom value instead — the client already resolves that to
+// free text before sending, so those two are accepted as any trimmed string.
 
-  const ward = clean(body.ward);
-  const pole_type = clean(body.pole_type);
-  const led_make = clean(body.led_make);
-  const numberOfLightsRaw = clean(body.number_of_lights);
-  const cb_condition = clean(body.cb_condition);
-  const dedicated_street_light_line = clean(body.dedicated_street_light_line);
+const clean = (v: unknown): string | null =>
+  v === undefined || v === null || String(v).trim() === "" ? null : String(v).trim();
 
-  if (ward !== null) {
-    const n = Number(ward);
-    if (!Number.isInteger(n) || n < WARD_MIN || n > WARD_MAX) {
-      throw new Error("Ward must be between 1 and 60");
-    }
-  }
+const buildLight = (raw: any): Light => ({
+  led_make: clean(raw?.led_make),
+  wattage: clean(raw?.wattage),
+});
+
+const buildPole = (raw: any): Pole => {
+  const pole_type = clean(raw?.pole_type);
+  const cb_condition = clean(raw?.cb_condition);
+  const dedicated_street_light_line = clean(raw?.dedicated_street_light_line);
+  const numberOfLightsRaw = clean(raw?.number_of_lights);
+
   if (pole_type !== null && !POLE_TYPES.includes(pole_type)) throw new Error("Invalid pole type");
   if (cb_condition !== null && !CB_CONDITIONS.includes(cb_condition)) throw new Error("Invalid C & B condition");
   if (dedicated_street_light_line !== null && !YES_NO.includes(dedicated_street_light_line)) {
@@ -54,44 +49,62 @@ const buildPayload = (body: Record<string, unknown>): SurveyPayload => {
     number_of_lights = n;
   }
 
-  // The client sends the per-light wattage list as a JSON string (FormData
-  // can't carry arrays natively). Fall back gracefully on anything malformed.
-  let wattages: string[] | null = null;
-  if (typeof body.wattages === "string" && body.wattages.trim() !== "") {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(body.wattages);
-    } catch {
-      throw new Error("Invalid wattages payload");
-    }
-    if (!Array.isArray(parsed)) throw new Error("Invalid wattages payload");
-
-    const cleaned = parsed.map((w) => (w === null || w === undefined ? "" : String(w).trim()));
-    wattages = number_of_lights !== null ? cleaned.slice(0, number_of_lights) : cleaned;
-  }
+  const lightsRaw = Array.isArray(raw?.lights) ? raw.lights : [];
+  const lights = (number_of_lights !== null ? lightsRaw.slice(0, number_of_lights) : lightsRaw).map(buildLight);
 
   return {
-    sl_no: clean(body.sl_no),
-    ward: ward !== null ? Number(ward) : null,
-    rr_number: clean(body.rr_number),
-    mescom_meter_serial_number: clean(body.mescom_meter_serial_number),
-    zen_meter_serial_number: clean(body.zen_meter_serial_number),
-    latitude: clean(body.latitude),
-    longitude: clean(body.longitude),
-    pole_number: clean(body.pole_number),
+    photo_url: clean(raw?.photo_url),
+    latitude: clean(raw?.latitude),
+    longitude: clean(raw?.longitude),
+    pole_number: clean(raw?.pole_number),
     pole_type,
-    led_make,
     number_of_lights,
-    wattages,
+    lights,
     cb_condition,
     dedicated_street_light_line,
   };
 };
 
+// Every field in the survey form is optional — this only validates the shape
+// of whatever *is* provided, it never requires a field to be present.
+const buildPayload = (body: Record<string, unknown>): SurveyPayload => {
+  const ward = clean(body.ward);
+  if (ward !== null) {
+    const n = Number(ward);
+    if (!Number.isInteger(n) || n < WARD_MIN || n > WARD_MAX) {
+      throw new Error("Ward must be between 1 and 60");
+    }
+  }
+
+  let poles: Pole[] = [];
+  if (typeof body.poles === "string" && body.poles.trim() !== "") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body.poles);
+    } catch {
+      throw new Error("Invalid poles payload");
+    }
+    if (!Array.isArray(parsed)) throw new Error("Invalid poles payload");
+    poles = parsed.map(buildPole);
+  }
+
+  return {
+    ward: ward !== null ? Number(ward) : null,
+    rr_number: clean(body.rr_number),
+    mescom_meter_serial_number: clean(body.mescom_meter_serial_number),
+    zen_meter_serial_number: clean(body.zen_meter_serial_number),
+    meter_photo_url: clean(body.meter_photo_url),
+    poles,
+  };
+};
+
+const getFiles = (req: Request): Express.Multer.File[] =>
+  Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
+
 export const addSurvey = async (req: Request, res: Response) => {
   try {
     const payload = buildPayload(req.body);
-    const { data, error } = await createSurvey(req.user!.id, payload, req.file);
+    const { data, error } = await createSurvey(req.user!.id, payload, getFiles(req));
     if (error) {
       console.error("Failed to create survey:", error);
       return res.status(500).json({ message: "Failed to save survey" });
@@ -141,7 +154,7 @@ export const editSurvey = async (req: Request, res: Response) => {
       id,
       { id: req.user!.id, role: req.user!.role as "ADMIN" | "SURVEYOR" },
       payload,
-      req.file
+      getFiles(req)
     );
     if (error || !data) {
       return res.status(400).json({ message: (error as any)?.message ?? "Failed to update survey" });

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAllSurveys, updateSurvey } from "../../survey/services/survey.service";
+import { getAllSurveys, createSurvey, updateSurvey } from "../../survey/services/survey.service";
 import type { Survey, SurveyFormValues } from "../../survey/services/survey.service";
 import SurveyForm from "../../survey/components/SurveyForm";
 import SurveyDetail from "../../survey/components/SurveyDetail";
@@ -12,6 +12,7 @@ const Surveys = () => {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Survey | null>(null);
   const [editing, setEditing] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   const openSurvey = (s: Survey) => { setSelected(s); setEditing(false); };
   const closeModal = () => { setSelected(null); setEditing(false); };
@@ -34,9 +35,15 @@ const Surveys = () => {
 
   useEffect(() => { void load(); }, []);
 
-  const handleUpdate = async (values: SurveyFormValues, photo: File | null) => {
+  const handleCreate = async (values: SurveyFormValues, photos: (File | null)[], meterPhoto: File | null) => {
+    await createSurvey(values, photos, meterPhoto);
+    setShowCreate(false);
+    await load();
+  };
+
+  const handleUpdate = async (values: SurveyFormValues, photos: (File | null)[], meterPhoto: File | null) => {
     if (!selected) return;
-    await updateSurvey(selected.id, values, photo);
+    await updateSurvey(selected.id, values, photos, meterPhoto);
     closeModal();
     await load();
   };
@@ -51,11 +58,11 @@ const Surveys = () => {
     const q = searchQuery.trim().toLowerCase();
     return surveys.filter((s) => {
       if (wardFilter && String(s.ward ?? "") !== wardFilter) return false;
-      if (poleTypeFilter && s.pole_type !== poleTypeFilter) return false;
-      if (ledMakeFilter && s.led_make !== ledMakeFilter) return false;
-      if (wattageFilter && !(s.wattages ?? []).includes(wattageFilter)) return false;
-      if (cbConditionFilter && s.cb_condition !== cbConditionFilter) return false;
-      if (dedicatedLineFilter && s.dedicated_street_light_line !== dedicatedLineFilter) return false;
+      if (poleTypeFilter && !s.poles.some((p) => p.pole_type === poleTypeFilter)) return false;
+      if (ledMakeFilter && !s.poles.some((p) => p.lights.some((l) => l.led_make === ledMakeFilter))) return false;
+      if (wattageFilter && !s.poles.some((p) => p.lights.some((l) => l.wattage === wattageFilter))) return false;
+      if (cbConditionFilter && !s.poles.some((p) => p.cb_condition === cbConditionFilter)) return false;
+      if (dedicatedLineFilter && !s.poles.some((p) => p.dedicated_street_light_line === dedicatedLineFilter)) return false;
       if (surveyorFilter && s.surveyor?.id !== surveyorFilter) return false;
       if (dateFilter && new Date(s.created_at).toISOString().slice(0, 10) !== dateFilter) return false;
       if (editedFilter === "admin" && s.last_edited_by_role !== "ADMIN") return false;
@@ -64,8 +71,9 @@ const Surveys = () => {
       if (q) {
         const haystack = [
           s.sl_no ?? "", s.rr_number ?? "", s.mescom_meter_serial_number ?? "",
-          s.zen_meter_serial_number ?? "", s.pole_number ?? "", s.led_make ?? "",
-          s.surveyor?.full_name ?? "",
+          s.zen_meter_serial_number ?? "", s.surveyor?.full_name ?? "",
+          ...s.poles.map((p) => p.pole_number ?? ""),
+          ...s.poles.flatMap((p) => p.lights.map((l) => l.led_make ?? "")),
         ].join(" ").toLowerCase();
         if (!haystack.includes(q)) return false;
       }
@@ -102,6 +110,7 @@ const Surveys = () => {
           >
             Export CSV
           </button>
+          <button onClick={() => setShowCreate(true)} className="bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg text-sm">+ New Survey</button>
         </div>
       </div>
 
@@ -166,10 +175,10 @@ const Surveys = () => {
             <table className="w-full">
               <thead className="bg-slate-100">
                 <tr>
+                  <th className="text-left p-4">SL No</th>
                   <th className="text-left p-4">Ward</th>
-                  <th className="text-left p-4">Pole Number</th>
-                  <th className="text-left p-4">LED Make</th>
-                  <th className="text-left p-4">C & B Condition</th>
+                  <th className="text-left p-4">RR Number</th>
+                  <th className="text-left p-4">Poles</th>
                   <th className="text-left p-4">Surveyor</th>
                   <th className="text-left p-4">Submitted</th>
                 </tr>
@@ -177,10 +186,10 @@ const Surveys = () => {
               <tbody>
                 {filteredSurveys.map((s) => (
                   <tr key={s.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={() => openSurvey(s)}>
+                    <td className="p-4 font-mono">{s.sl_no || "—"}</td>
                     <td className="p-4">{s.ward ? `Ward ${s.ward}` : "—"}</td>
-                    <td className="p-4">{s.pole_number || "—"}</td>
-                    <td className="p-4">{s.led_make || "—"}</td>
-                    <td className="p-4">{s.cb_condition || "—"}</td>
+                    <td className="p-4">{s.rr_number || "—"}</td>
+                    <td className="p-4">{s.poles.length}</td>
                     <td className="p-4">{s.surveyor?.full_name ?? "—"}</td>
                     <td className="p-4">{new Date(s.created_at).toLocaleDateString()}</td>
                   </tr>
@@ -194,7 +203,7 @@ const Surveys = () => {
             {filteredSurveys.map((s) => (
               <div key={s.id} onClick={() => openSurvey(s)} className="bg-white rounded-xl shadow border p-4 cursor-pointer active:bg-slate-50">
                 <div className="flex justify-between items-start gap-2 mb-1">
-                  <span className="font-medium text-slate-800">{s.pole_number || s.sl_no || "Untitled entry"}</span>
+                  <span className="font-medium text-slate-800">{s.sl_no || "Untitled entry"}</span>
                   {s.last_edited_by_role === "ADMIN" && (
                     <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Edited by admin</span>
                   )}
@@ -202,7 +211,7 @@ const Surveys = () => {
                     <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full shrink-0">Edited by surveyor</span>
                   )}
                 </div>
-                <p className="text-sm text-slate-500">{s.ward ? `Ward ${s.ward}` : "No ward"} · {s.surveyor?.full_name ?? "Unknown surveyor"}</p>
+                <p className="text-sm text-slate-500">{s.ward ? `Ward ${s.ward}` : "No ward"} · {s.poles.length} pole{s.poles.length === 1 ? "" : "s"} · {s.surveyor?.full_name ?? "Unknown surveyor"}</p>
                 <p className="text-xs text-slate-400 mt-1">{new Date(s.created_at).toLocaleString()}</p>
               </div>
             ))}
@@ -210,7 +219,7 @@ const Surveys = () => {
         </>
       )}
 
-      <Modal isOpen={!!selected} onClose={closeModal} title={selected?.pole_number || selected?.sl_no || "Survey Entry"}>
+      <Modal isOpen={!!selected} onClose={closeModal} title={selected?.sl_no || "Survey Entry"}>
         {selected && (
           editing ? (
             <SurveyForm initial={selected} onSubmit={handleUpdate} submitLabel="Save Changes" />
@@ -218,6 +227,10 @@ const Surveys = () => {
             <SurveyDetail survey={selected} onEdit={() => setEditing(true)} />
           )
         )}
+      </Modal>
+
+      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Survey">
+        <SurveyForm onSubmit={handleCreate} submitLabel="Submit Survey" />
       </Modal>
     </div>
   );

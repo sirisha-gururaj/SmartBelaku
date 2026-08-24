@@ -45,7 +45,7 @@ const SurveyorDashboard = () => {
           {surveys.map((s) => (
             <button key={s.id} onClick={() => navigate(`/surveyor/${s.id}`)} className="bg-white rounded-xl shadow border p-4 text-left hover:border-teal-600 active:bg-slate-50 transition">
               <div className="flex justify-between items-start gap-2 mb-1">
-                <span className="font-medium text-slate-800">{s.pole_number || s.sl_no || "Untitled entry"}</span>
+                <span className="font-medium text-slate-800">{s.sl_no || "Untitled entry"}</span>
                 {s.last_edited_by_role === "ADMIN" && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Edited by admin</span>
                 )}
@@ -54,7 +54,7 @@ const SurveyorDashboard = () => {
                 )}
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                {s.ward ? `Ward ${s.ward} · ` : ""}{new Date(s.created_at).toLocaleString()}
+                {s.ward ? `Ward ${s.ward} · ` : ""}{s.poles.length} pole{s.poles.length === 1 ? "" : "s"} · {new Date(s.created_at).toLocaleString()}
               </p>
             </button>
           ))}

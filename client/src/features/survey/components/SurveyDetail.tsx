@@ -8,7 +8,7 @@ interface Props {
 }
 
 const SurveyDetail = ({ survey, onEdit }: Props) => {
-  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
+  const [viewerPhotoUrl, setViewerPhotoUrl] = useState<string | null>(null);
 
   return (
     <div className="space-y-5">
@@ -29,38 +29,67 @@ const SurveyDetail = ({ survey, onEdit }: Props) => {
         <Field label="RR Number" value={survey.rr_number} />
         <Field label="Mescom Meter Serial Number" value={survey.mescom_meter_serial_number} />
         <Field label="Zen Meter Serial Number" value={survey.zen_meter_serial_number} />
-        <Field label="Latitude" value={survey.latitude} />
-        <Field label="Longitude" value={survey.longitude} />
-        <Field label="Pole Number" value={survey.pole_number} />
-        <Field label="Pole Type" value={survey.pole_type} />
-        <Field label="LED Make" value={survey.led_make} />
-        <Field label="Number of Lights" value={survey.number_of_lights ? String(survey.number_of_lights) : null} />
-        <Field label="C & B Condition" value={survey.cb_condition} />
-        <Field label="Dedicated Street Light Line" value={survey.dedicated_street_light_line} />
         <Field label="Surveyor" value={survey.surveyor?.full_name ?? null} />
       </div>
 
-      {survey.wattages && survey.wattages.length > 0 && (
+      {survey.meter_photo_url && (
         <div>
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Wattage per Light</p>
-          <div className="flex flex-wrap gap-1.5">
-            {survey.wattages.map((w, i) => (
-              <span key={i} className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded-full">
-                Light {i + 1}: {w || "—"}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {survey.photo_url && (
-        <div>
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Photo</p>
-          <button type="button" onClick={() => setShowPhotoViewer(true)} className="mt-1 block">
-            <img src={survey.photo_url} alt="Survey" className="h-32 w-32 object-cover rounded-lg border hover:opacity-80 transition" />
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Meter Photo</p>
+          <button type="button" onClick={() => setViewerPhotoUrl(survey.meter_photo_url)} className="mt-1 block">
+            <img src={survey.meter_photo_url} alt="Meter" className="h-32 w-32 object-cover rounded-lg border hover:opacity-80 transition" />
           </button>
         </div>
       )}
+
+      <div className="pt-2 border-t">
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
+          Poles ({survey.poles.length})
+        </p>
+
+        {survey.poles.length === 0 ? (
+          <p className="text-sm text-slate-400">No poles recorded.</p>
+        ) : (
+          <div className="space-y-4">
+            {survey.poles.map((pole, i) => (
+              <div key={i} className="border rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-teal-700">Pole {i + 1}</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                  <Field label="Pole Number" value={pole.pole_number} />
+                  <Field label="Pole Type" value={pole.pole_type} />
+                  <Field label="Latitude" value={pole.latitude} />
+                  <Field label="Longitude" value={pole.longitude} />
+                  <Field label="Number of Lights" value={pole.number_of_lights ? String(pole.number_of_lights) : null} />
+                  <Field label="C & B Condition" value={pole.cb_condition} />
+                  <Field label="Dedicated Street Light Line" value={pole.dedicated_street_light_line} />
+                </div>
+
+                {pole.lights && pole.lights.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Lights</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {pole.lights.map((l, li) => (
+                        <span key={li} className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded-full">
+                          Light {li + 1}: {l.led_make || "—"} / {l.wattage || "—"}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {pole.photo_url && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Photo</p>
+                    <button type="button" onClick={() => setViewerPhotoUrl(pole.photo_url)} className="mt-1 block">
+                      <img src={pole.photo_url} alt={`Pole ${i + 1}`} className="h-32 w-32 object-cover rounded-lg border hover:opacity-80 transition" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {survey.last_edited_by_role && (
         <p className={`text-xs ${survey.last_edited_by_role === "ADMIN" ? "text-amber-700" : "text-slate-500"}`}>
@@ -75,8 +104,8 @@ const SurveyDetail = ({ survey, onEdit }: Props) => {
         </button>
       </div>
 
-      <Modal isOpen={showPhotoViewer} onClose={() => setShowPhotoViewer(false)} title="Photo" zIndexClass="z-[80]">
-        {survey.photo_url && <img src={survey.photo_url} alt="Survey full size" className="w-full rounded-lg" />}
+      <Modal isOpen={!!viewerPhotoUrl} onClose={() => setViewerPhotoUrl(null)} title="Photo" zIndexClass="z-[80]">
+        {viewerPhotoUrl && <img src={viewerPhotoUrl} alt="Survey full size" className="w-full rounded-lg" />}
       </Modal>
     </div>
   );

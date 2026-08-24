@@ -11,7 +11,8 @@ export interface StoredPole {
   longitude: string | null;
   pole_number: string | null;
   pole_type: string | null;
-  number_of_lights: number | null;
+  // Either a light count (1-20) or the literal label "Required" / "Not Required".
+  number_of_lights: number | string | null;
   lights: StoredLight[];
   cb_condition: string | null;
   dedicated_street_light_line: string | null;
@@ -27,6 +28,7 @@ export interface Survey {
   zen_meter_serial_number: string | null;
   meter_photo_url: string | null;
   poles: StoredPole[];
+  deleted_by_surveyor: boolean;
   last_edited_by_role: "ADMIN" | "SURVEYOR" | null;
   last_edited_at: string | null;
   last_edited_by_id: string | null;
@@ -132,4 +134,8 @@ export const updateSurvey = async (
     headers: { "Content-Type": "multipart/form-data" },
   });
   return res.data;
+};
+
+export const deleteSurvey = async (id: string): Promise<void> => {
+  await api.delete(`/surveys/${id}`);
 };

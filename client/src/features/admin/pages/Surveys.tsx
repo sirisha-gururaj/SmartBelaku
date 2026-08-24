@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { getAllSurveys, createSurvey, updateSurvey } from "../../survey/services/survey.service";
-import type { Survey, SurveyFormValues } from "../../survey/services/survey.service";
+import { getAllSurveys, deleteSurvey } from "../../survey/services/survey.service";
+import type { Survey } from "../../survey/services/survey.service";
 import SurveyForm from "../../survey/components/SurveyForm";
 import SurveyDetail from "../../survey/components/SurveyDetail";
 import Modal from "../../../components/ui/Modal";
@@ -35,15 +35,20 @@ const Surveys = () => {
 
   useEffect(() => { void load(); }, []);
 
-  const handleCreate = async (values: SurveyFormValues, photos: (File | null)[], meterPhoto: File | null) => {
-    await createSurvey(values, photos, meterPhoto);
+  const handleCreated = async () => {
     setShowCreate(false);
     await load();
   };
 
-  const handleUpdate = async (values: SurveyFormValues, photos: (File | null)[], meterPhoto: File | null) => {
+  const handleUpdated = async () => {
+    closeModal();
+    await load();
+  };
+
+  const handleDelete = async () => {
     if (!selected) return;
-    await updateSurvey(selected.id, values, photos, meterPhoto);
+    if (!confirm("Permanently delete this survey? This cannot be undone.")) return;
+    await deleteSurvey(selected.id);
     closeModal();
     await load();
   };
@@ -175,23 +180,27 @@ const Surveys = () => {
             <table className="w-full">
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="text-left p-4">SL No</th>
-                  <th className="text-left p-4">Ward</th>
                   <th className="text-left p-4">RR Number</th>
+                  <th className="text-left p-4">Ward</th>
                   <th className="text-left p-4">Poles</th>
                   <th className="text-left p-4">Surveyor</th>
                   <th className="text-left p-4">Submitted</th>
+                  <th className="text-left p-4">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSurveys.map((s) => (
                   <tr key={s.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={() => openSurvey(s)}>
-                    <td className="p-4 font-mono">{s.sl_no || "—"}</td>
+                    <td className="p-4 font-mono">{s.rr_number || "—"}</td>
                     <td className="p-4">{s.ward ? `Ward ${s.ward}` : "—"}</td>
-                    <td className="p-4">{s.rr_number || "—"}</td>
                     <td className="p-4">{s.poles.length}</td>
                     <td className="p-4">{s.surveyor?.full_name ?? "—"}</td>
                     <td className="p-4">{new Date(s.created_at).toLocaleDateString()}</td>
+                    <td className="p-4">
+                      {s.deleted_by_surveyor && (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">Deleted by Surveyor</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -203,13 +212,18 @@ const Surveys = () => {
             {filteredSurveys.map((s) => (
               <div key={s.id} onClick={() => openSurvey(s)} className="bg-white rounded-xl shadow border p-4 cursor-pointer active:bg-slate-50">
                 <div className="flex justify-between items-start gap-2 mb-1">
-                  <span className="font-medium text-slate-800">{s.sl_no || "Untitled entry"}</span>
-                  {s.last_edited_by_role === "ADMIN" && (
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Edited by admin</span>
-                  )}
-                  {s.last_edited_by_role === "SURVEYOR" && (
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full shrink-0">Edited by surveyor</span>
-                  )}
+                  <span className="font-medium text-slate-800">{s.rr_number || "Untitled entry"}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {s.deleted_by_surveyor && (
+                      <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">Deleted by Surveyor</span>
+                    )}
+                    {s.last_edited_by_role === "ADMIN" && (
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Edited by admin</span>
+                    )}
+                    {s.last_edited_by_role === "SURVEYOR" && (
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">Edited by surveyor</span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-slate-500">{s.ward ? `Ward ${s.ward}` : "No ward"} · {s.poles.length} pole{s.poles.length === 1 ? "" : "s"} · {s.surveyor?.full_name ?? "Unknown surveyor"}</p>
                 <p className="text-xs text-slate-400 mt-1">{new Date(s.created_at).toLocaleString()}</p>
@@ -219,18 +233,18 @@ const Surveys = () => {
         </>
       )}
 
-      <Modal isOpen={!!selected} onClose={closeModal} title={selected?.sl_no || "Survey Entry"}>
+      <Modal isOpen={!!selected} onClose={closeModal} title={selected?.rr_number || "Survey Entry"}>
         {selected && (
           editing ? (
-            <SurveyForm initial={selected} onSubmit={handleUpdate} submitLabel="Save Changes" />
+            <SurveyForm initial={selected} onSubmitted={handleUpdated} submitLabel="Save Changes" />
           ) : (
-            <SurveyDetail survey={selected} onEdit={() => setEditing(true)} />
+            <SurveyDetail survey={selected} onEdit={() => setEditing(true)} onDelete={handleDelete} />
           )
         )}
       </Modal>
 
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Survey">
-        <SurveyForm onSubmit={handleCreate} submitLabel="Submit Survey" />
+        <SurveyForm onSubmitted={handleCreated} submitLabel="Submit Survey" />
       </Modal>
     </div>
   );

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import SurveyForm from "../components/SurveyForm";
-import { createSurvey, getSurveyById, updateSurvey } from "../services/survey.service";
-import type { Survey, SurveyFormValues } from "../services/survey.service";
+import { getSurveyById } from "../services/survey.service";
+import type { Survey } from "../services/survey.service";
 
 const SurveyFormPage = () => {
   const { id } = useParams();
@@ -25,15 +25,6 @@ const SurveyFormPage = () => {
     })();
   }, [id, navigate]);
 
-  const handleSubmit = async (values: SurveyFormValues, photos: (File | null)[], meterPhoto: File | null) => {
-    if (id) {
-      await updateSurvey(id, values, photos, meterPhoto);
-    } else {
-      await createSurvey(values, photos, meterPhoto);
-    }
-    navigate("/surveyor");
-  };
-
   if (loading) return <p className="text-slate-500">Loading...</p>;
 
   return (
@@ -42,7 +33,7 @@ const SurveyFormPage = () => {
       <p className="text-slate-500 text-sm mb-6">
         {id ? "Update any field below — you can edit this survey anytime." : "All fields are optional — fill in what you can."}
       </p>
-      <SurveyForm initial={survey ?? undefined} onSubmit={handleSubmit} submitLabel={id ? "Save Changes" : "Submit Survey"} />
+      <SurveyForm initial={survey ?? undefined} onSubmitted={() => navigate("/surveyor")} submitLabel={id ? "Save Changes" : "Submit Survey"} />
     </div>
   );
 };

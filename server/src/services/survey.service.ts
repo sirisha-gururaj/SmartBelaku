@@ -15,7 +15,8 @@ export interface Pole {
   longitude: string | null;
   pole_number: string | null;
   pole_type: string | null;
-  number_of_lights: number | null;
+  // Either a light count (1-20) or the literal label "Required" / "Not Required".
+  number_of_lights: number | string | null;
   lights: Light[];
   cb_condition: string | null;
   dedicated_street_light_line: string | null;
@@ -103,6 +104,7 @@ export const getMySurveys = async (surveyorId: string) => {
     .from("surveys")
     .select("*")
     .eq("surveyor_id", surveyorId)
+    .eq("deleted_by_surveyor", false)
     .order("created_at", { ascending: false });
 };
 
@@ -166,4 +168,21 @@ export const updateSurvey = async (
     .eq("id", id)
     .select("*, surveyor:users!surveyor_id(id, full_name)")
     .single();
+};
+
+// A surveyor "deleting" their own survey just hides it from their own list —
+// it stays fully visible to Admin, tagged so they can see it was removed.
+export const softDeleteSurvey = async (id: string, surveyorId: string) => {
+  return await supabase
+    .from("surveys")
+    .update({ deleted_by_surveyor: true })
+    .eq("id", id)
+    .eq("surveyor_id", surveyorId)
+    .select("id")
+    .single();
+};
+
+// Admin deleting a survey is final.
+export const hardDeleteSurvey = async (id: string) => {
+  return await supabase.from("surveys").delete().eq("id", id).select("id").single();
 };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMySurveys } from "../services/survey.service";
+import { getMySurveys, deleteSurvey } from "../services/survey.service";
 import type { Survey } from "../services/survey.service";
 import { exportSurveysToCsv } from "../utils/csv";
 
@@ -8,6 +8,7 @@ const SurveyorDashboard = () => {
   const navigate = useNavigate();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -15,6 +16,21 @@ const SurveyorDashboard = () => {
   };
 
   useEffect(() => { void load(); }, []);
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm("Delete this survey? It will be removed from your list.")) return;
+    setDeletingId(id);
+    try {
+      await deleteSurvey(id);
+      await load();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete survey");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div>
@@ -43,20 +59,29 @@ const SurveyorDashboard = () => {
       ) : (
         <div className="grid gap-3">
           {surveys.map((s) => (
-            <button key={s.id} onClick={() => navigate(`/surveyor/${s.id}`)} className="bg-white rounded-xl shadow border p-4 text-left hover:border-teal-600 active:bg-slate-50 transition">
+            <div key={s.id} onClick={() => navigate(`/surveyor/${s.id}`)} className="bg-white rounded-xl shadow border p-4 text-left hover:border-teal-600 active:bg-slate-50 transition cursor-pointer">
               <div className="flex justify-between items-start gap-2 mb-1">
-                <span className="font-medium text-slate-800">{s.sl_no || "Untitled entry"}</span>
-                {s.last_edited_by_role === "ADMIN" && (
-                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full shrink-0">Edited by admin</span>
-                )}
-                {s.last_edited_by_role === "SURVEYOR" && (
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full shrink-0">Edited by you</span>
-                )}
+                <span className="font-medium text-slate-800">{s.rr_number || "Untitled entry"}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {s.last_edited_by_role === "ADMIN" && (
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">Edited by admin</span>
+                  )}
+                  {s.last_edited_by_role === "SURVEYOR" && (
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">Edited by you</span>
+                  )}
+                  <button
+                    onClick={(e) => handleDelete(e, s.id)}
+                    disabled={deletingId === s.id}
+                    className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                  >
+                    {deletingId === s.id ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
               </div>
               <p className="text-xs text-slate-400 mt-1">
                 {s.ward ? `Ward ${s.ward} · ` : ""}{s.poles.length} pole{s.poles.length === 1 ? "" : "s"} · {new Date(s.created_at).toLocaleString()}
               </p>
-            </button>
+            </div>
           ))}
         </div>
       )}

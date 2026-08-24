@@ -5,21 +5,27 @@ import Modal from "../../../components/ui/Modal";
 interface Props {
   survey: Survey;
   onEdit: () => void;
+  onDelete?: () => void;
 }
 
-const SurveyDetail = ({ survey, onEdit }: Props) => {
+const SurveyDetail = ({ survey, onEdit, onDelete }: Props) => {
   const [viewerPhotoUrl, setViewerPhotoUrl] = useState<string | null>(null);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap justify-between items-center gap-2 pb-4 border-b">
-        {survey.last_edited_by_role === "ADMIN" ? (
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Edited by Admin</span>
-        ) : survey.last_edited_by_role === "SURVEYOR" ? (
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">Edited by Surveyor</span>
-        ) : (
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">Not Edited</span>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {survey.deleted_by_surveyor && (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Deleted by Surveyor</span>
+          )}
+          {survey.last_edited_by_role === "ADMIN" ? (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Edited by Admin</span>
+          ) : survey.last_edited_by_role === "SURVEYOR" ? (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">Edited by Surveyor</span>
+          ) : (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">Not Edited</span>
+          )}
+        </div>
         <span className="text-xs text-slate-400">Submitted {new Date(survey.created_at).toLocaleString()}</span>
       </div>
 
@@ -98,10 +104,15 @@ const SurveyDetail = ({ survey, onEdit }: Props) => {
         </p>
       )}
 
-      <div className="pt-2 border-t">
+      <div className="pt-2 border-t space-y-2">
         <button onClick={onEdit} className="w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-lg font-medium text-base">
           Edit Survey
         </button>
+        {onDelete && (
+          <button onClick={onDelete} className="w-full border border-red-300 text-red-600 hover:bg-red-50 py-3 rounded-lg font-medium text-base">
+            Delete Survey
+          </button>
+        )}
       </div>
 
       <Modal isOpen={!!viewerPhotoUrl} onClose={() => setViewerPhotoUrl(null)} title="Photo" zIndexClass="z-[80]">

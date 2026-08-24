@@ -1,13 +1,14 @@
 import { useRef, useState, useEffect } from "react";
 import type { Survey, SurveyFormValues, PoleFormValues, LightFormValues, StoredPole } from "../services/survey.service";
+import { createSurvey, updateSurvey } from "../services/survey.service";
 import { WARDS, POLE_TYPES, LED_MAKES, WATTAGES, CB_CONDITIONS, YES_NO } from "../constants";
 import Modal from "../../../components/ui/Modal";
 
 const emptyLight = (): LightFormValues => ({ led_make: "", led_make_other: "", wattage: "", wattage_other: "" });
 
-const emptyPole = (poleNumber = ""): PoleFormValues => ({
+const emptyPole = (poleNumber = "", cbCondition = "", dedicatedLine = ""): PoleFormValues => ({
   photo_url: null, latitude: "", longitude: "", pole_number: poleNumber, pole_type: "",
-  number_of_lights: "", lights: [], cb_condition: "", dedicated_street_light_line: "",
+  number_of_lights: "", lights: [], cb_condition: cbCondition, dedicated_street_light_line: dedicatedLine,
 });
 
 // A brand new form always starts its pole numbering at P1, regardless of any
@@ -23,6 +24,41 @@ const emptyValues: SurveyFormValues = {
 const splitOther = (value: string | null, knownValues: readonly string[]): [string, string] => {
   if (!value) return ["", ""];
   return knownValues.includes(value) ? [value, ""] : ["Others", value];
+};
+
+// One draft slot per (user, survey) — a fresh "new survey" form uses one slot
+// per user, an in-progress edit of an existing survey gets its own slot so it
+// never collides with someone else's draft or another survey's draft.
+const getDraftKey = (surveyId?: string) => {
+  if (surveyId) return `survey-draft-edit-${surveyId}`;
+  try {
+    const userRaw = localStorage.getItem("user");
+    const userId = userRaw ? JSON.parse(userRaw).id : "anon";
+    return `survey-draft-new-${userId}`;
+  } catch {
+    return "survey-draft-new-anon";
+  }
+};
+
+// Newly attached photos are only ever local blob: URLs, which stop working
+// the moment the tab/browser closes — strip those out before saving so a
+// restored draft doesn't show a broken image instead of just "no photo yet".
+const sanitizeForDraft = (v: SurveyFormValues): SurveyFormValues => ({
+  ...v,
+  meter_photo_url: v.meter_photo_url?.startsWith("blob:") ? null : v.meter_photo_url,
+  poles: v.poles.map((p) => ({
+    ...p,
+    photo_url: p.photo_url?.startsWith("blob:") ? null : p.photo_url,
+  })),
+});
+
+const loadDraft = (surveyId?: string): SurveyFormValues | null => {
+  try {
+    const saved = localStorage.getItem(getDraftKey(surveyId));
+    return saved ? (JSON.parse(saved) as SurveyFormValues) : null;
+  } catch {
+    return null;
+  }
 };
 
 const toPoleFormValues = (p: StoredPole): PoleFormValues => ({
@@ -52,7 +88,10 @@ const toFormValues = (s: Survey): SurveyFormValues => ({
 
 interface Props {
   initial?: Survey;
-  onSubmit: (values: SurveyFormValues, photos: (File | null)[], meterPhoto: File | null) => Promise<void>;
+  // Called once the survey has actually been saved to the server via the
+  // Submit button — the form itself now owns create/update, this is purely
+  // "what happens next" (navigate away, close a modal, etc).
+  onSubmitted: (survey: Survey) => void;
   submitLabel?: string;
 }
 
@@ -60,13 +99,22 @@ interface Props {
 // plus one per pole) — this says which slot is currently being captured for.
 type CameraTarget = number | "meter" | null;
 
-const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) => {
-  const [values, setValues] = useState<SurveyFormValues>(initial ? toFormValues(initial) : emptyValues);
+const SurveyForm = ({ initial, onSubmitted, submitLabel = "Save Survey" }: Props) => {
+  const draftOnLoad = useRef(loadDraft(initial?.id));
+  const [values, setValues] = useState<SurveyFormValues>(
+    () => draftOnLoad.current ?? (initial ? toFormValues(initial) : emptyValues)
+  );
   const [photos, setPhotos] = useState<(File | null)[]>(() => values.poles.map(() => null));
   const [meterPhoto, setMeterPhoto] = useState<File | null>(null);
   const [locatingIndex, setLocatingIndex] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draftSaved, setDraftSaved] = useState<{ poleIndex: number; time: Date } | null>(null);
+
+  // Once Save (or Submit) has actually persisted this form to the server, it
+  // becomes "the survey being edited" for every save after that — the very
+  // first Save on a brand new form creates it; every one after that updates it.
+  const [survey, setSurvey] = useState<Survey | null>(initial ?? null);
 
   const [cameraTarget, setCameraTarget] = useState<CameraTarget>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -92,7 +140,14 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
   const addPole = () => {
     const suggested = nextPoleNumberRef.current;
     nextPoleNumberRef.current = suggested + 1;
-    setValues((prev) => ({ ...prev, poles: [...prev.poles, emptyPole(`P${suggested}`)] }));
+    setValues((prev) => {
+      // C & B Condition and Dedicated Street Light Line usually stay the same
+      // from one pole to the next, so carry the previous pole's answer forward
+      // as the default — the surveyor can still change it if this pole differs.
+      const last = prev.poles[prev.poles.length - 1];
+      const newPole = emptyPole(`P${suggested}`, last?.cb_condition ?? "", last?.dedicated_street_light_line ?? "");
+      return { ...prev, poles: [...prev.poles, newPole] };
+    });
     setPhotos((prev) => [...prev, null]);
   };
 
@@ -102,7 +157,8 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
   };
 
   const handlePoleLightsCountChange = (poleIndex: number, value: string) => {
-    const n = value ? Number(value) : 0;
+    // "Required"/"Not Required" aren't counts — only an actual number produces light rows.
+    const n = /^\d+$/.test(value) ? Number(value) : 0;
     setValues((prev) => ({
       ...prev,
       poles: prev.poles.map((p, i) => {
@@ -122,24 +178,6 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
         return { ...p, lights };
       }),
     }));
-  };
-
-  const handlePhotoChange = (poleIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
-    setPhotos((prev) => prev.map((f, i) => (i === poleIndex ? file : f)));
-    const previewUrl = URL.createObjectURL(file);
-    setValues((prev) => ({
-      ...prev,
-      poles: prev.poles.map((p, i) => (i === poleIndex ? { ...p, photo_url: previewUrl } : p)),
-    }));
-  };
-
-  const handleMeterPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
-    setMeterPhoto(file);
-    setValues((prev) => ({ ...prev, meter_photo_url: URL.createObjectURL(file) }));
   };
 
   const handleUseLocation = (poleIndex: number) => {
@@ -231,12 +269,56 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
     }, "image/jpeg", 0.9);
   };
 
+  // The first save on a brand new form creates it; every save after that
+  // (including on other poles, and the final Submit) updates that same row.
+  const persistToServer = async (): Promise<Survey> =>
+    survey ? await updateSurvey(survey.id, values, photos, meterPhoto) : await createSurvey(values, photos, meterPhoto);
+
+  // After a successful save, resync from what the server actually stored —
+  // this swaps local blob: photo previews for their real uploaded URLs and
+  // clears the pending File objects so they aren't re-uploaded next time.
+  const applySaved = (saved: Survey) => {
+    setSurvey(saved);
+    setValues(toFormValues(saved));
+    setPhotos(saved.poles.map(() => null));
+    setMeterPhoto(null);
+  };
+
+  // Tracks which pole's Save button was last tapped, so the confirmation
+  // shows right above that pole instead of somewhere the user has to scroll
+  // back up to see. This saves for real — same as Submit — so it shows up in
+  // both dashboards immediately; only Submit additionally closes the form.
+  const handleSaveDraft = async (poleIndex: number) => {
+    setError(null);
+    const draftKey = getDraftKey(survey?.id);
+    // A local copy first — cheap, synchronous, and can't fail from a bad connection.
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(sanitizeForDraft(values)));
+    } catch {
+      // Local storage being full/disabled isn't fatal — the server save below is what matters now.
+    }
+
+    try {
+      const saved = await persistToServer();
+      applySaved(saved);
+      localStorage.removeItem(draftKey);
+      setDraftSaved({ poleIndex, time: new Date() });
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ??
+        "Could not sync to the server — your progress is still saved on this device and will sync next time you tap Save."
+      );
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await onSubmit(values, photos, meterPhoto);
+      const saved = await persistToServer();
+      localStorage.removeItem(getDraftKey(survey?.id));
+      onSubmitted(saved);
     } catch (err: any) {
       setError(err?.response?.data?.message ?? "Failed to save survey");
     } finally {
@@ -251,15 +333,21 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">{error}</div>}
 
-      {initial?.sl_no && (
+      {survey?.sl_no && (
         <div className="bg-slate-50 rounded-lg p-3 text-sm text-slate-600">
-          SL No: <span className="font-medium text-slate-800">{initial.sl_no}</span>
+          SL No: <span className="font-medium text-slate-800">{survey.sl_no}</span>
         </div>
       )}
 
-      {initial?.last_edited_by_role === "ADMIN" && (
+      {survey?.last_edited_by_role === "ADMIN" && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg p-3">
-          Edited by admin{initial.last_edited_at ? ` on ${new Date(initial.last_edited_at).toLocaleString()}` : ""}.
+          Edited by admin{survey.last_edited_at ? ` on ${new Date(survey.last_edited_at).toLocaleString()}` : ""}.
+        </div>
+      )}
+
+      {draftOnLoad.current && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-lg p-3">
+          Restored your progress saved earlier on this device.
         </div>
       )}
 
@@ -283,15 +371,9 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
       </Field>
 
       <Field label="Meter Photo">
-        <div className="flex flex-wrap gap-2">
-          <label className="inline-flex items-center border rounded-lg px-3 py-2 text-sm text-slate-700 cursor-pointer hover:border-teal-600">
-            Upload a Photo
-            <input type="file" accept="image/*" onChange={handleMeterPhotoChange} className="hidden" />
-          </label>
-          <button type="button" onClick={() => openCamera("meter")} className="border rounded-lg px-3 py-2 text-sm text-teal-700 hover:border-teal-600">
-            📷 Open Camera
-          </button>
-        </div>
+        <button type="button" onClick={() => openCamera("meter")} className="border rounded-lg px-3 py-2 text-sm text-teal-700 hover:border-teal-600">
+          📷 Open Camera
+        </button>
         {cameraError && cameraTarget === null && <p className="text-red-600 text-xs mt-1">{cameraError}</p>}
         {values.meter_photo_url && (
           <button type="button" onClick={() => setViewerPhotoUrl(values.meter_photo_url)} className="mt-2 block">
@@ -305,29 +387,30 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
 
         <div className="space-y-5">
           {values.poles.map((pole, poleIndex) => (
-            <div key={poleIndex} className="border-2 border-slate-200 rounded-xl p-4 space-y-4 relative">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold text-teal-700">Pole {poleIndex + 1}</span>
-                {values.poles.length > 1 && (
-                  <button type="button" onClick={() => removePole(poleIndex)} className="text-xs text-red-600 hover:underline">
-                    Remove pole
-                  </button>
-                )}
-              </div>
-
-              <Field label="Photo">
-                <div className="flex flex-wrap gap-2">
-                  {/* No `capture` attribute — that forces the camera straight open on
-                      mobile. Leaving it off lets the browser's own chooser offer both
-                      "Take Photo" and "Choose from Gallery/Files" there. */}
-                  <label className="inline-flex items-center border rounded-lg px-3 py-2 text-sm text-slate-700 cursor-pointer hover:border-teal-600">
-                    Upload a Photo
-                    <input type="file" accept="image/*" onChange={(e) => handlePhotoChange(poleIndex, e)} className="hidden" />
-                  </label>
-                  <button type="button" onClick={() => openCamera(poleIndex)} className="border rounded-lg px-3 py-2 text-sm text-teal-700 hover:border-teal-600">
-                    📷 Open Camera
-                  </button>
+            <div key={poleIndex}>
+              {draftSaved?.poleIndex === poleIndex && (
+                <p className="text-xs text-teal-700 text-right mb-1">
+                  Progress saved at {draftSaved.time.toLocaleTimeString()}.
+                </p>
+              )}
+              <div className="border-2 border-slate-200 rounded-xl p-4 space-y-4 relative">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-teal-700">Pole {poleIndex + 1}</span>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => handleSaveDraft(poleIndex)} className="text-xs text-teal-700 hover:underline font-medium">
+                      Save
+                    </button>
+                    {values.poles.length > 1 && (
+                      <button type="button" onClick={() => removePole(poleIndex)} className="text-xs text-red-600 hover:underline">
+                        Remove pole
+                      </button>
+                    )}
+                  </div>
                 </div>
+              <Field label="Photo">
+                <button type="button" onClick={() => openCamera(poleIndex)} className="border rounded-lg px-3 py-2 text-sm text-teal-700 hover:border-teal-600">
+                  📷 Open Camera
+                </button>
                 {cameraError && cameraTarget === null && <p className="text-red-600 text-xs mt-1">{cameraError}</p>}
 
                 {pole.photo_url && (
@@ -367,6 +450,8 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
               <Field label="Number of Lights">
                 <select value={pole.number_of_lights} onChange={(e) => handlePoleLightsCountChange(poleIndex, e.target.value)} className={inputClass}>
                   <option value="">— Not specified —</option>
+                  <option value="Required">Required</option>
+                  <option value="Not Required">Not Required</option>
                   {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </Field>
@@ -423,6 +508,7 @@ const SurveyForm = ({ initial, onSubmit, submitLabel = "Save Survey" }: Props) =
                   {YES_NO.map((y) => <option key={y} value={y}>{y}</option>)}
                 </select>
               </Field>
+              </div>
             </div>
           ))}
         </div>

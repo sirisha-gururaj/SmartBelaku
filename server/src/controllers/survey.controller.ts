@@ -5,6 +5,8 @@ import {
   getAllSurveys,
   getSurveyById,
   updateSurvey,
+  softDeleteSurvey,
+  hardDeleteSurvey,
 } from "../services/survey.service";
 import type { SurveyPayload, Pole, Light } from "../services/survey.service";
 
@@ -16,6 +18,7 @@ const LIGHTS_MAX = 20;
 const POLE_TYPES = ["RCC", "Octogonal", "Tubular", "Rail", "Mini Mast", "High Mast"];
 const CB_CONDITIONS = ["Good", "Bad"];
 const YES_NO = ["yes", "no"];
+const LIGHTS_LABELS = ["Required", "Not Required"];
 // LED Make and Wattage both have an "Others" dropdown option that lets the
 // surveyor type a custom value instead — the client already resolves that to
 // free text before sending, so those two are accepted as any trimmed string.
@@ -40,17 +43,23 @@ const buildPole = (raw: any): Pole => {
     throw new Error("Invalid value for dedicated street light line");
   }
 
-  let number_of_lights: number | null = null;
+  let number_of_lights: number | string | null = null;
   if (numberOfLightsRaw !== null) {
-    const n = Number(numberOfLightsRaw);
-    if (!Number.isInteger(n) || n < LIGHTS_MIN || n > LIGHTS_MAX) {
-      throw new Error("Number of Lights must be between 1 and 20");
+    if (LIGHTS_LABELS.includes(numberOfLightsRaw)) {
+      number_of_lights = numberOfLightsRaw;
+    } else {
+      const n = Number(numberOfLightsRaw);
+      if (!Number.isInteger(n) || n < LIGHTS_MIN || n > LIGHTS_MAX) {
+        throw new Error("Number of Lights must be between 1 and 20, or Required / Not Required");
+      }
+      number_of_lights = n;
     }
-    number_of_lights = n;
   }
 
+  // "Required"/"Not Required" aren't counts, so there's nothing to size the
+  // lights list against — only an actual number produces light rows.
   const lightsRaw = Array.isArray(raw?.lights) ? raw.lights : [];
-  const lights = (number_of_lights !== null ? lightsRaw.slice(0, number_of_lights) : lightsRaw).map(buildLight);
+  const lights = typeof number_of_lights === "number" ? lightsRaw.slice(0, number_of_lights).map(buildLight) : [];
 
   return {
     photo_url: clean(raw?.photo_url),
@@ -144,6 +153,27 @@ export const fetchSurveyById = async (req: Request, res: Response) => {
     return res.status(403).json({ message: "Insufficient permissions" });
   }
   return res.json(data);
+};
+
+// A surveyor deleting their own survey only hides it from their own list —
+// Admin still sees it, tagged as deleted by the surveyor. Admin deleting a
+// survey removes it outright.
+export const removeSurvey = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+
+  if (req.user!.role === "ADMIN") {
+    const { data, error } = await hardDeleteSurvey(id);
+    if (error || !data) {
+      return res.status(404).json({ message: "Survey not found" });
+    }
+    return res.json({ success: true });
+  }
+
+  const { data, error } = await softDeleteSurvey(id, req.user!.id);
+  if (error || !data) {
+    return res.status(404).json({ message: "Survey not found" });
+  }
+  return res.json({ success: true });
 };
 
 export const editSurvey = async (req: Request, res: Response) => {
